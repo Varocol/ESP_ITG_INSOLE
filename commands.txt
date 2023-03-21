@@ -1,0 +1,81 @@
+menu
+ list all functions and descriptions
+
+Pressure1_GetData
+ return pressure1 sensors' datas
+
+Pressure1_Calibrate
+ calibrate pressure1 sensor
+
+Pressure2_GetData
+ return pressure2 sensors' datas
+
+Pressure2_Calibrate
+ calibrate pressure2 sensor
+
+Pressure3_GetData
+ return pressure3 sensors' datas
+
+Pressure3_Calibrate
+ calibrate pressure3 sensor
+
+Gyroscope_GetGyroRateDivisor
+ return value of gyro rate divisor
+
+Gyroscope_SetGyroRateDivisor
+   -gyroratedivisor (1~256)
+ set the gyro rate divisor
+
+Gyroscope_GetAccelRateDivisor
+ return value of accel rate divisor
+
+Gyroscope_SetAccelRateDivisor
+   -accelratedivisor (1~65536)
+ set the accel rate divisor
+
+Gyroscope_GetAccelRange
+ return the accel range
+
+Gyroscope_SetAccelRange
+   -accelrange 2|4|8|16
+ return accel range
+
+Gyroscope_GetGyroRange
+ return the gyro range
+
+Gyroscope_SetGyroRange
+   -gyrorange 250|500|1000|2000
+ set the gyro range
+
+Gyroscope_GetMagDataRate
+ return the mag data rate
+
+Gyroscope_SetMagDataRate
+   -magdatarate SHUTDOWN|SINGLE|10|20|50|100
+ set mag data rate
+
+Gyroscope_EnableAccelDLPF
+   -enable ENABLE|DISABLE
+   -cutoff_freq 437|246|111.4|50.4|23.9|11.5|5.7
+ enable the accel DLPF(low pass filter)
+
+Gyroscope_EnableGyrolDLPF
+  -enable enable|disable
+  -cutoff_freq 361.4|196.6|151.8|119.5|51.2|23.9|11.6|5.7
+ enable the gyrol DLPF(low pass filter)
+
+Gyroscope_GetData
+ return the gyroscope datas
+
+clear_nvs_namespace
+ clear the nvs space
+
+protocol_data
+ return the packet consist of the data from all the sensors
+
+show_task
+ stow task that existed
+
+stop_task
+ -name (task name)
+ stop task that existed

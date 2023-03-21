@@ -1,0 +1,5 @@
+adafruit/Adafruit ICM20X@^2.0.5
+SPI
+bblanchon/ArduinoJson@^6.21.0
+adafruit/Adafruit Unified Sensor @ ^1.1.8
+adafruit/Adafruit BusIO @ ^1.14.1

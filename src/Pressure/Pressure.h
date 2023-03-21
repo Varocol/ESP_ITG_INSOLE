@@ -1,0 +1,168 @@
+#ifndef __PRESSURE_H
+#define __PRESSURE_H
+
+#include "header.h"
+
+// PRESSURE SENSORS I2C ADDR
+#define PRESSURE1_ADDR 0x2C
+#define PRESSURE2_ADDR 0x2D
+#define PRESSURE3_ADDR 0x2E
+
+// PRESSURE CALIBRATE VALUE DATAS NAMESPACE
+#define CALIBRATE_VALUE_SPACENAME "CALIBRATE_VALUE"
+#define PRESSURE1_CALIBRATE_VALUE_KEY "PRESSURE1"
+#define PRESSURE2_CALIBRATE_VALUE_KEY "PRESSURE2"
+#define PRESSURE3_CALIBRATE_VALUE_KEY "PRESSURE3"
+
+// NUMBER OF CHANNELS PER PRESSURE
+#define CHANNEL_NUM 12
+
+// BASE VALUE OF CALIBRATION
+#define CALIBRATION_BASE 0x7FFF
+
+// TIMES OF SAMPLE PER CALIBRATE TEST
+#define SAMPLE_TIMES 5
+
+#define DEVICE_ID 0x1471
+#define DEVICE_ID_REG_ADDR 0x0017
+#define PWR_CONTROL_REG_ADDR 0x0000
+#define PWR_CONTROL_DEFAULT_CONFIG_MASK 0x02B0
+#define CONVERSION_RESULT_REG_ADDR 0x000B
+#define STAGE_COMPLETE_STATUS_REG_ADDR 0x000A
+#define STAGE0_COMPLETE_MASK 0x0001
+#define STAGE_ALL_COMPLETE_MASK 0x0FFF
+
+#define STAGE_AFE_OFFSET_MASK 0x3F00
+#define STAGE_CONFIGURE_REG_BASIC_ADDR 0x0080
+#define STAGE_CONFIGURE_REG_STEP 0x0008
+
+#define STAGE0_CONNECTION1_DEFAULT_CONFIG 0x3FFE
+#define STAGE0_CONNECTION2_DEFAULT_CONFIG 0x1FFF
+
+#define STAGE1_CONNECTION1_DEFAULT_CONFIG 0x3FFB
+#define STAGE1_CONNECTION2_DEFAULT_CONFIG 0x1FFF
+
+#define STAGE2_CONNECTION1_DEFAULT_CONFIG 0x3FEF
+#define STAGE2_CONNECTION2_DEFAULT_CONFIG 0x1FFF
+
+#define STAGE3_CONNECTION1_DEFAULT_CONFIG 0x3FBF
+#define STAGE3_CONNECTION2_DEFAULT_CONFIG 0x1FFF
+
+#define STAGE4_CONNECTION1_DEFAULT_CONFIG 0x3EFF
+#define STAGE4_CONNECTION2_DEFAULT_CONFIG 0x1FFF
+
+#define STAGE5_CONNECTION1_DEFAULT_CONFIG 0x3BFF
+#define STAGE5_CONNECTION2_DEFAULT_CONFIG 0x1FFF
+
+#define STAGE6_CONNECTION1_DEFAULT_CONFIG 0x2FFF
+#define STAGE6_CONNECTION2_DEFAULT_CONFIG 0x1FFF
+
+#define STAGE7_CONNECTION1_DEFAULT_CONFIG 0x3FFF
+#define STAGE7_CONNECTION2_DEFAULT_CONFIG 0x1FFE
+
+#define STAGE8_CONNECTION1_DEFAULT_CONFIG 0x3FFF
+#define STAGE8_CONNECTION2_DEFAULT_CONFIG 0x1FFB
+
+#define STAGE9_CONNECTION1_DEFAULT_CONFIG 0x3FFF
+#define STAGE9_CONNECTION2_DEFAULT_CONFIG 0x1FEF
+
+#define STAGEA_CONNECTION1_DEFAULT_CONFIG 0x3FFF
+#define STAGEA_CONNECTION2_DEFAULT_CONFIG 0x1FBF
+
+#define STAGEB_CONNECTION1_DEFAULT_CONFIG 0x3FFF
+#define STAGEB_CONNECTION2_DEFAULT_CONFIG 0x1EFF
+
+// PRESSURE TIMEOUT
+#define TIMEOUT 0xFF
+
+// PRESSURE STATUS CODE
+typedef enum
+{
+    VERIFY_FAILED = -10,
+    POWERON_FAILED,
+    POWEROFF_FAILED,
+    SLAVEADDR_ERR,
+    NAMESPACE_FAILED,
+    STORE_CALIBRATE_FAILED,
+    CONFIG_STAGES_FAILED,
+    POWERMODE_ERR,
+    CALIBRATE_FAILED,
+    STAGE_CONVERT_TIMEOUT,
+    GET_CALIBRATE_VALUE_SUCCESS,
+    SET_CALIBRATE_VALUE_SUCCESS,
+    PRESSURE_INIT_SUCCESS,
+    POWERON_SUCCESS,
+    POWEROFF_SUCCESS,
+    CONFIG_STAGES_SUCCESS,
+    CALIBRATE_SUCCESS,
+    VERIFY_SUCCESS,
+    GET_DATA_SUCCESS
+} PRESSURE_STATUS_CODE;
+
+typedef enum
+{
+    FULL_POWER = 0,
+    LOW_POWER = 2,
+    FULL_DOWN = 3
+} PowerMode;
+
+// PRESSURE DATA PACKET
+typedef struct
+{
+    vector<uint16_t> datas;
+} Pressure_Packet;
+
+// device name
+typedef enum
+{
+    PRESSURE1,
+    PRESSURE2,
+    PRESSURE3
+} Pressure_Id;
+
+class Pressure
+{
+private:
+    uint8_t slaveaddr;
+    Pressure_Id pressure_id;
+    TwoWire wire = Wire;
+    struct 
+    {
+        uint8_t offset;
+        uint16_t benchmark;
+    } Calibrate_Val[CHANNEL_NUM];
+    void sendDatas(const uint8_t &len, ...);
+    Pressure_Packet receiveDatas(const uint8_t &len);
+    PRESSURE_STATUS_CODE getCalibrateVal();
+    PRESSURE_STATUS_CODE setCalibrateVal();
+    bool singleStageConversionCheck(const uint8_t &channel);
+    uint8_t getAddr(const Pressure_Id &pressure_id);
+
+public:
+    Pressure();
+    ~Pressure();
+
+    Pressure(const Pressure_Id &pressure_id, const TwoWire &wire = Wire);
+
+    PRESSURE_STATUS_CODE init();
+    PRESSURE_STATUS_CODE powerOn(const PowerMode &powermode);
+    PRESSURE_STATUS_CODE powerOff();
+    PRESSURE_STATUS_CODE configStages();
+    PRESSURE_STATUS_CODE calibration(String &msg);
+    PRESSURE_STATUS_CODE verify();
+    String message(const PRESSURE_STATUS_CODE &status_code);
+    String message(const char *msg);
+    String message(const Pressure_Packet &packet);
+    bool allStageconversionCheck();
+    PRESSURE_STATUS_CODE getData(Pressure_Packet &packet);
+    PRESSURE_STATUS_CODE getCalibrateVal(uint16_t (&benchmark_Val)[CHANNEL_NUM]);
+};
+
+#ifdef WIRE_USE_MUTEX
+bool Wire_Mutex_Init();
+#endif
+
+extern Pressure pressure1;
+extern Pressure pressure2;
+extern Pressure pressure3;
+#endif // !__PRESSURE_H
