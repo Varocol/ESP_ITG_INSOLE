@@ -124,7 +124,7 @@ Gyroscope_GetData
 clear_nvs_namespace
  clear the nvs space
 
-protocol_data
+data_json
  return the packet consist of the data from all the sensors
 
 show_task
