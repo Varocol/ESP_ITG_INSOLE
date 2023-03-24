@@ -137,7 +137,82 @@ stop_task
 
 ### Supports Bluetooth Low Energy (BLE) for data transfer from all sensors
 
-Use ESP's low-power Bluetooth to transmit all sensor data packets, which are packaged in json format through the ArduinoJson api.
+Use ESP's low-power Bluetooth to transmit all sensor data packets, which are packaged in json format through the ArduinoJson api.The packet format is as follows:
+
+```json
+{
+    "PRESSURE1": {
+        "datas": [
+            -4,
+            -3,
+            -4,
+            -4,
+            -4,
+            -3,
+            -3,
+            -3,
+            -3,
+            -4,
+            -3,
+            -7
+        ]
+    },
+    "PRESSURE2": {
+        "datas": [
+            -2,
+            -4,
+            -3,
+            -3,
+            -3,
+            -3,
+            -3,
+            -3,
+            -3,
+            -2,
+            -4,
+            -2
+        ]
+    },
+    "PRESSURE3": {
+        "datas": [
+            -1,
+            -3,
+            -2,
+            -2,
+            -3,
+            -2,
+            -4,
+            -2,
+            -5,
+            -2,
+            -2,
+            -5
+        ]
+    },
+    "GYROSCOPE": {
+        "datas": {
+            "accel": {
+                "x": 0.263362199,
+                "y": 0.474051923,
+                "z": 9.911994934
+            },
+            "gyro": {
+                "x": 0.012770702,
+                "y": 0.004256901,
+                "z": -0.001064225
+            },
+            "mag": {
+                "x": -8.399999619,
+                "y": 31.64999962,
+                "z": 8.25
+            },
+            "temp": 24.354599
+        }
+    }
+}
+```
+
+
 
 ##  Features still to be implemented
 
