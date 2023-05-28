@@ -18,8 +18,7 @@
 #include <algorithm>
 #include <numeric>
 #include <iomanip>
-
-#define Debug_Mode 1
+#include "Freenove_WS2812_Lib_for_ESP32.h"
 
 using namespace std;
 

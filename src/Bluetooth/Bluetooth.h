@@ -3,6 +3,7 @@
 
 #include "header.h"
 #include "Hardware.h"
+#include "Package.h"
 
 #define DEVICE_NAME "ESP32_ITG_INSOLE"
 #define SERVICE_UUID "a8eda7cf-4f72-43ff-8d0b-10c592128526"

@@ -52,20 +52,22 @@ void bluetooth_sendmessage(String msg)
 void MyServerCallbacks::onConnect(BLEServer *pServer)
 {
     deviceConnected = true;
-    Message_Println("[BLE]:Connected.");
+    log_i("[BLE]:Connected.");
 }
 
 void MyServerCallbacks::onDisconnect(BLEServer *pServer)
 {
     deviceConnected = false;
+    certification = false;
     delay(500);
-    Serial.println("[BLE]:Disconnected.");
-    Serial.println("[BLE]:Start Advertising.");
+    log_i("[BLE]:Disconnected.");
+    log_i("[BLE]:Start Advertising.");
     pServer->getAdvertising()->start();
 }
 
 void MyCallbacks::onWrite(BLECharacteristic *pCharacteristic)
 {
     ble_msg = new String(pCharacteristic->getValue().c_str());
-    xTaskCreate(function_map_task, "function_map", TASK_STACK_SIZE, (void *)ble_msg, 1, NULL);
+    log_i("[BLE]:Received: %s", ble_msg->c_str());
+    Rec_Package(*ble_msg);
 }
