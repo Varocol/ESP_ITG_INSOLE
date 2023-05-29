@@ -60,9 +60,13 @@ void Sleep_Timer_task(void *Parameter)
     if (ready_to_sleep)
     {
         log_i("Go to sleep!");
-        WS2812_Blink_typedef led_mode;
-        led_mode.WS2812_Blink_Mode = Close;
-        xQueueSend(WS2812_control, &led_mode, portMAX_DELAY);
+        // 停止所有线程
+        for (int i = 0; i < Task_List.size(); i++)
+        {
+            Task_List[i].status = Stop;
+            vTaskDelete(Task_List[i].handle);
+        }
+        close_LED();
          // GPIO0-GPIO3
         const uint64_t WAKEUP_HIGH_PIN_BITMASK = 0b001111;
         for (int i = 0; i < 6; i++)
@@ -95,7 +99,7 @@ void Task_Init()
     for (int i = 0; i < Task_List.size(); i++)
     {
         log_i("Create Task %s", Task_List.at(i).name);
-        xTaskCreate(Task_List.at(i).task, Task_List.at(i).name, 2048, (void *)&Task_List.at(i), Task_List.at(i).Priority, NULL);
+        xTaskCreate(Task_List.at(i).task, Task_List.at(i).name, 2048, (void *)&Task_List.at(i), Task_List.at(i).Priority, &Task_List.at(i).handle);
     }
     Sleep_Timer = xTimerCreate("Sleep_Timer",            /*任务名字*/
                                10000 / portTICK_RATE_MS, /*设置时钟周期:1000ms = 10s*/

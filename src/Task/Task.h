@@ -4,6 +4,11 @@
 #include "header.h"
 #include "Hardware.h"
 
+extern QueueHandle_t WS2812_control;
+extern bool device_is_connect ;
+extern bool bluetooth_is_connect ;
+extern bool ready_to_sleep ;
+
 // 用于控制任务的进行和结束
 typedef enum
 {
@@ -16,6 +21,7 @@ typedef struct
     const char *name;
     volatile Task_Status status;
     int Priority;
+    TaskHandle_t handle;
 } Task_Control_Block;
 
 void LED_task(void *Parameter);

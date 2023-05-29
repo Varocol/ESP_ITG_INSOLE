@@ -73,19 +73,57 @@
 //   // }
 // }
 
-// #include "Hardware.h"
-// #include <esp_sleep.h>
 
-// 鞋垫插上去 INT会
+// // 鞋垫插上去 INT会
 void setup()
 {
   Hardware_Init();
   Task_Init();
 }
 
+unsigned int last_time;
 void loop()
 {
-  delay(1000);
+  if (digitalRead(1) == LOW)
+  {
+    device_is_connect = true;
+
+    if (Check_Sensor())
+    {
+
+    }
+    else
+    {
+      // 明显，有传感器出现错误
+      if (millis() - last_time > 3000)
+      {
+        // 每隔3秒闪烁一次LED（红色）
+        WS2812_Blink_typedef led_mode;
+        led_mode.WS2812_Blink_Mode = Double_flashing;
+        led_mode.r = 255;
+        led_mode.g = 0;
+        led_mode.b = 0;
+        xQueueSend(WS2812_control, &led_mode, portMAX_DELAY);
+        last_time = millis();
+      }
+      delay(1);
+    }
+  }
+  else
+  {
+    if (millis() - last_time > 5000)
+    {
+      // 每隔5秒呼吸一次LED（橙色）
+      WS2812_Blink_typedef led_mode;
+      led_mode.WS2812_Blink_Mode = Breathe;
+      led_mode.r = 255;
+      led_mode.g = 153;
+      led_mode.b = 0;
+      xQueueSend(WS2812_control, &led_mode, portMAX_DELAY);
+      last_time = millis();
+    }
+    device_is_connect = false;
+  }
 }
 
 // #include "Freenove_WS2812_Lib_for_ESP32.h"
@@ -111,9 +149,6 @@ void loop()
 //   }
 // }
 
-
-
-
 // #include <FastLED.h>
 
 // // How many leds in your strip?
@@ -128,7 +163,7 @@ void loop()
 // // Define the array of leds
 // CRGB leds[NUM_LEDS];
 
-// void setup() { 
+// void setup() {
 //     // Uncomment/edit one of the following lines for your leds arrangement.
 //     // ## Clockless types ##
 //     // FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);  // GRB ordering is assumed
@@ -172,7 +207,7 @@ void loop()
 //     // FastLED.addLeds<SK9822, DATA_PIN, CLOCK_PIN, RGB>(leds, NUM_LEDS);  // BGR ordering is typical
 // }
 
-// void loop() { 
+// void loop() {
 //   // Turn the LED on, then pause
 //   leds[0] = CRGB::Red;
 //   FastLED.show();
@@ -182,7 +217,6 @@ void loop()
 //   FastLED.show();
 //   delay(500);
 // }
-
 
 // #include "Freenove_WS2812_Lib_for_ESP32.h"
 
@@ -195,7 +229,7 @@ void loop()
 
 // void setup() {
 // 	strip.begin();
-// 	strip.setBrightness(10);	
+// 	strip.setBrightness(10);
 // }
 // void loop() {
 // 	for (int j = 0; j < 5; j++) {
@@ -204,4 +238,49 @@ void loop()
 //     delay(delayval);
 // 		delay(500);
 // 	}
+// }
+
+
+// #include <Wire.h>
+
+// void setup()
+// {
+//   Wire.setPins(SDA_PIN, SCL_PIN);
+//   Wire.begin(-1, -1, I2C_BAUDRATE);
+//   Serial.begin(115200);
+//   Serial.println("nI2C Scanner");
+// }
+
+// void loop()
+// {
+//   byte error, address;
+//   int nDevices;
+//   Serial.println("Scanning...");
+//   nDevices = 0;
+//   for(address = 1; address < 127; address++ ) 
+//   {
+//     Wire.beginTransmission(address);
+//     error = Wire.endTransmission();
+//     if (error == 0)
+//     {
+//       Serial.print("I2C device found at address 0x");
+//       if (address<16) 
+//         Serial.print("0");
+//       Serial.print(address,HEX);
+//       Serial.println("  !");
+//       nDevices++;
+//     }
+//     else if (error==4) 
+//     {
+//       Serial.print("Unknow error at address 0x");
+//       if (address<16) 
+//         Serial.print("0");
+//       Serial.println(address,HEX);
+//     }    
+//   }
+//   if (nDevices == 0)
+//     Serial.println("No I2C devices foundn");
+//   else
+//     Serial.println("donen");
+//   delay(1000);           // wait 5 seconds for next scan
 // }

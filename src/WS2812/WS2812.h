@@ -22,6 +22,7 @@ typedef struct
 
 extern Freenove_ESP32_WS2812 WS2812;
 void init_LED();
+void close_LED();
 void LED_blink(WS2812_Blink_typedef element);
 
 #endif // !__WS2812_H

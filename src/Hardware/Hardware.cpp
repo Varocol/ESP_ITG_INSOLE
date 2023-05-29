@@ -5,7 +5,6 @@ String *serial_msg;
 bool certification = false;
 
 
-
 /**
  * @brief  Serial Devices Initialization
  * @param  None
@@ -16,11 +15,16 @@ void Wire_Init()
     if (Wire.setPins(SDA_PIN, SCL_PIN))
     {
         log_i("[Wire]:Pin Set Successfully.");
-        ESP_ERROR_CHECK(ESP_FAIL);
     }
     else
     {
         log_e("[Wire]:Pin Set Failed.");
+        WS2812_Blink_typedef led_mode;
+        led_mode.WS2812_Blink_Mode = Double_flashing;
+        led_mode.r = 255;
+        led_mode.g = 0;
+        led_mode.b = 0;
+        xQueueSend(WS2812_control, &led_mode, portMAX_DELAY);
         ESP_ERROR_CHECK(ESP_FAIL);
     }
     if (Wire.begin(-1, -1, I2C_BAUDRATE))
@@ -30,6 +34,12 @@ void Wire_Init()
     else
     {
         log_e("[Wire]:I2C Started Failed.");
+        WS2812_Blink_typedef led_mode;
+        led_mode.WS2812_Blink_Mode = Double_flashing;
+        led_mode.r = 255;
+        led_mode.g = 0;
+        led_mode.b = 0;
+        xQueueSend(WS2812_control, &led_mode, portMAX_DELAY);
         ESP_ERROR_CHECK(ESP_FAIL);
     }
 #ifdef WIRE_USE_MUTEX
@@ -40,6 +50,12 @@ void Wire_Init()
     else
     {
         log_e("[Wire]:Mutex Failed.");
+        WS2812_Blink_typedef led_mode;
+        led_mode.WS2812_Blink_Mode = Double_flashing;
+        led_mode.r = 255;
+        led_mode.g = 0;
+        led_mode.b = 0;
+        xQueueSend(WS2812_control, &led_mode, portMAX_DELAY);
         ESP_ERROR_CHECK(ESP_FAIL);
     }
 #endif
@@ -53,19 +69,19 @@ bool Pressure_Init()
 {
     PRESSURE_STATUS_CODE status;
     status = pressure1.init();
-    log_i("%s", pressure1.message(status));
+    log_i("%s", pressure1.message(status).c_str());
     if (status < 0)
     {
         return false;
     }
     status = pressure2.init();
-    log_i("%s", pressure2.message(status));
+    log_i("%s", pressure2.message(status).c_str());
     if (status < 0)
     {
         return false;
     }
     status = pressure3.init();
-    log_i("%s", pressure3.message(status));
+    log_i("%s", pressure3.message(status).c_str());
     if (status < 0)
     {
         return false;
@@ -81,7 +97,7 @@ bool Pressure_Init()
 bool Gyroscope_Init()
 {
     GYROSCOPE_STATUS_CODE status = gyroscope_init();
-    log_i("%s", gyroscope_message(status));
+    log_i("%s", gyroscope_message(status).c_str());
     if (status < 0)
     {
         return false;
@@ -98,6 +114,7 @@ void Hardware_Init()
 {
     init_LED();
     Wire_Init();
+    pinMode(1,INPUT_PULLUP);
     // if (!Wire_Init())
     // {
     //     return false;
@@ -242,46 +259,34 @@ String data_json()
 
 bool Check_Sensor()
 {
-    byte error;
+    uint8_t error;
     Wire.beginTransmission(GYROSCOPE_ADDR);
     error = Wire.endTransmission();
     if (error != 0)
     {
-        return false;
-    }
-    else
-    {
         log_e("I2C GYROSCOPE error : %d", error);
+        return false;
     }
     Wire.beginTransmission(PRESSURE1_ADDR);
     error = Wire.endTransmission();
     if (error != 0)
     {
-        return false;
-    }
-    else
-    {
         log_e("I2C PRESSURE1 error : %d", error);
+        return false;
     }
     Wire.beginTransmission(PRESSURE2_ADDR);
     error = Wire.endTransmission();
     if (error != 0)
     {
-        return false;
-    }
-    else
-    {
         log_e("I2C PRESSURE2 error : %d", error);
+        return false;
     }
     Wire.beginTransmission(PRESSURE3_ADDR);
     error = Wire.endTransmission();
     if (error != 0)
     {
-        return false;
-    }
-    else
-    {
         log_e("I2C PRESSURE3 error : %d", error);
+        return false;
     }
     return true;
 }

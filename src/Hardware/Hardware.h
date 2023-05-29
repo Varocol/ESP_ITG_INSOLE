@@ -10,8 +10,8 @@
 
 
 #define SERIAL_BAUDRATE 115200
-#define SDA_PIN 12
-#define SCL_PIN 1
+#define SDA_PIN 7
+#define SCL_PIN 8
 #define I2C_BAUDRATE 1000000UL
 
 #define WS2812_PIN 6
@@ -23,7 +23,6 @@ bool Pressure_Init();
 bool Gyroscope_Init();
 void Hardware_Init();
 bool Check_Sensor();
-
 // Serial_Callback
 // Output Interface
 
