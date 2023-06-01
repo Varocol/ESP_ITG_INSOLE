@@ -56,13 +56,13 @@ void LED_blink(WS2812_Blink_typedef element)
         WS2812.setBrightness(254);
         WS2812.setLedColorData(0, element.r, element.g, element.b);
         WS2812.show();
-        delay(100);
+        delay(70);
         WS2812.setLedColorData(0, 0, 0, 0);
         WS2812.show();
-        delay(100);
+        delay(70);
         WS2812.setLedColorData(0, element.r, element.g, element.b);
         WS2812.show();
-        delay(100);
+        delay(70);
         WS2812.setLedColorData(0, 0, 0, 0);
         WS2812.show();
     }

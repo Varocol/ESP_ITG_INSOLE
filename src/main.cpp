@@ -73,51 +73,71 @@
 //   // }
 // }
 
-
-// // 鞋垫插上去 INT会
+// 鞋垫插上去 INT会
 void setup()
 {
   Hardware_Init();
   Task_Init();
+  int_NimBLE();
 }
 
-unsigned int last_time;
 void loop()
 {
   if (digitalRead(1) == LOW)
   {
     device_is_connect = true;
-
+    ready_to_sleep = false;
     if (Check_Sensor())
     {
-
+      if (!Check_Sensor_OK)
+      {
+        Check_Sensor_OK = true;
+        if (!Pressure_Init())
+        {
+          hardware_error();
+        }
+        else
+        {
+          check_Pressure_Calibrate();
+        }
+        if (!Gyroscope_Init())
+        {
+          hardware_error();
+        }
+      }
+      if (Check_Sensor_OK)
+      {
+        if (millis() - last_time > 5000)
+        {
+          // 每隔5秒闪烁一次LED（绿色）
+          WS2812_Blink_typedef led_mode;
+          led_mode.WS2812_Blink_Mode = Double_flashing;
+          led_mode.r = 0;
+          led_mode.g = 255;
+          led_mode.b = 0;
+          xQueueSend(WS2812_control, &led_mode, portMAX_DELAY);
+          last_time = millis();
+        }
+        update_ble_data();
+      }
     }
     else
     {
       // 明显，有传感器出现错误
-      if (millis() - last_time > 3000)
-      {
-        // 每隔3秒闪烁一次LED（红色）
-        WS2812_Blink_typedef led_mode;
-        led_mode.WS2812_Blink_Mode = Double_flashing;
-        led_mode.r = 255;
-        led_mode.g = 0;
-        led_mode.b = 0;
-        xQueueSend(WS2812_control, &led_mode, portMAX_DELAY);
-        last_time = millis();
-      }
+      hardware_error();
       delay(1);
     }
   }
   else
   {
-    if (millis() - last_time > 5000)
+    Check_Sensor_OK = false;
+    if (millis() - last_time > 3000)
     {
-      // 每隔5秒呼吸一次LED（橙色）
+      // 每隔3秒闪烁一次LED（红色）
       WS2812_Blink_typedef led_mode;
       led_mode.WS2812_Blink_Mode = Breathe;
-      led_mode.r = 255;
-      led_mode.g = 153;
+      led_mode.r = 233;
+      led_mode.g = 175;
       led_mode.b = 0;
       xQueueSend(WS2812_control, &led_mode, portMAX_DELAY);
       last_time = millis();
@@ -126,161 +146,178 @@ void loop()
   }
 }
 
-// #include "Freenove_WS2812_Lib_for_ESP32.h"
+/** NimBLE_Server Demo:
+ *
+ *  Demonstrates many of the available features of the NimBLE server library.
+ *
+ *  Created: on March 22 2020
+ *      Author: H2zero
+ *
+ */
 
-// #define LEDS_COUNT  8
-// #define LEDS_PIN	6
-// #define CHANNEL		0
+// static NimBLEServer* pServer;
 
-// Freenove_ESP32_WS2812 strip = Freenove_ESP32_WS2812(LEDS_COUNT, LEDS_PIN, CHANNEL, TYPE_GRB);
+// /**  None of these are required as they will be handled by the library with defaults. **
+//  **                       Remove as you see fit for your needs                        */
+// class ServerCallbacks: public NimBLEServerCallbacks {
+//     void onConnect(NimBLEServer* pServer) {
+//         Serial.println("Client connected");
+//         Serial.println("Multi-connect support: start advertising");
+//         NimBLEDevice::startAdvertising();
+//     };
+//     /** Alternative onConnect() method to extract details of the connection.
+//      *  See: src/ble_gap.h for the details of the ble_gap_conn_desc struct.
+//      */
+//     void onConnect(NimBLEServer* pServer, ble_gap_conn_desc* desc) {
+//         Serial.print("Client address: ");
+//         Serial.println(NimBLEAddress(desc->peer_ota_addr).toString().c_str());
+//         /** We can use the connection handle here to ask for different connection parameters.
+//          *  Args: connection handle, min connection interval, max connection interval
+//          *  latency, supervision timeout.
+//          *  Units; Min/Max Intervals: 1.25 millisecond increments.
+//          *  Latency: number of intervals allowed to skip.
+//          *  Timeout: 10 millisecond increments, try for 5x interval time for best results.
+//          */
+//         pServer->updateConnParams(desc->conn_handle, 24, 48, 0, 60);
+//     };
+//     void onDisconnect(NimBLEServer* pServer) {
+//         Serial.println("Client disconnected - start advertising");
+//         NimBLEDevice::startAdvertising();
+//     };
+//     void onMTUChange(uint16_t MTU, ble_gap_conn_desc* desc) {
+//         Serial.printf("MTU updated: %u for connection ID: %u\n", MTU, desc->conn_handle);
+//     };
+
+// /********************* Security handled here **********************
+// ****** Note: these are the same return values as defaults ********/
+//     uint32_t onPassKeyRequest(){
+//         Serial.println("Server Passkey Request");
+//         /** This should return a random 6 digit number for security
+//          *  or make your own static passkey as done here.
+//          */
+//         return 123456;
+//     };
+
+//     bool onConfirmPIN(uint32_t pass_key){
+//         Serial.print("The passkey YES/NO number: ");Serial.println(pass_key);
+//         /** Return false if passkeys don't match. */
+//         return true;
+//     };
+
+//     void onAuthenticationComplete(ble_gap_conn_desc* desc){
+//         /** Check that encryption was successful, if not we disconnect the client */
+//         if(!desc->sec_state.encrypted) {
+//             NimBLEDevice::getServer()->disconnect(desc->conn_handle);
+//             Serial.println("Encrypt connection failed - disconnecting client");
+//             return;
+//         }
+//         Serial.println("Starting BLE work!");
+//     };
+// };
+
+// /** Handler class for characteristic actions */
+// class CharacteristicCallbacks: public NimBLECharacteristicCallbacks {
+//     void onRead(NimBLECharacteristic* pCharacteristic){
+//         Serial.print(pCharacteristic->getUUID().toString().c_str());
+//         Serial.print(": onRead(), value: ");
+//         Serial.println(pCharacteristic->getValue().c_str());
+//     };
+
+//     void onWrite(NimBLECharacteristic* pCharacteristic) {
+//         Serial.print(pCharacteristic->getUUID().toString().c_str());
+//         Serial.print(": onWrite(), value: ");
+//         Serial.println(pCharacteristic->getValue().c_str());
+//     };
+//     /** Called before notification or indication is sent,
+//      *  the value can be changed here before sending if desired.
+//      */
+//     void onNotify(NimBLECharacteristic* pCharacteristic) {
+//         Serial.println("Sending notification to clients");
+//     };
+
+//     /** The status returned in status is defined in NimBLECharacteristic.h.
+//      *  The value returned in code is the NimBLE host return code.
+//      */
+//     void onStatus(NimBLECharacteristic* pCharacteristic, Status status, int code) {
+//         String str = ("Notification/Indication status code: ");
+//         str += status;
+//         str += ", return code: ";
+//         str += code;
+//         str += ", ";
+//         str += NimBLEUtils::returnCodeToString(code);
+//         Serial.println(str);
+//     };
+
+//     void onSubscribe(NimBLECharacteristic* pCharacteristic, ble_gap_conn_desc* desc, uint16_t subValue) {
+//         String str = "Client ID: ";
+//         str += desc->conn_handle;
+//         str += " Address: ";
+//         str += std::string(NimBLEAddress(desc->peer_ota_addr)).c_str();
+//         if(subValue == 0) {
+//             str += " Unsubscribed to ";
+//         }else if(subValue == 1) {
+//             str += " Subscribed to notfications for ";
+//         } else if(subValue == 2) {
+//             str += " Subscribed to indications for ";
+//         } else if(subValue == 3) {
+//             str += " Subscribed to notifications and indications for ";
+//         }
+//         str += std::string(pCharacteristic->getUUID()).c_str();
+
+//         Serial.println(str);
+//     };
+// };
+
+// /** Handler class for descriptor actions */
+// class DescriptorCallbacks : public NimBLEDescriptorCallbacks {
+//     void onWrite(NimBLEDescriptor* pDescriptor) {
+//         std::string dscVal = pDescriptor->getValue();
+//         Serial.print("Descriptor witten value:");
+//         Serial.println(dscVal.c_str());
+//     };
+
+//     void onRead(NimBLEDescriptor* pDescriptor) {
+//         Serial.print(pDescriptor->getUUID().toString().c_str());
+//         Serial.println(" Descriptor read");
+//     };
+// };
+
+// /** Define callback instances globally to use for multiple Charateristics \ Descriptors */
+// static CharacteristicCallbacks chrCallbacks;
 
 // void setup() {
-//   strip.begin();
-//   strip.setBrightness(20);
+//     Serial.begin(115200);
+//     Serial.println("Starting NimBLE Server");
+
+//     NimBLEDevice::init(DEVICE_NAME);
+//     NimBLEDevice::setPower(ESP_PWR_LVL_P9); /** +9db */
+//     NimBLEDevice::setSecurityAuth( BLE_SM_PAIR_AUTHREQ_SC);
+//     pServer = NimBLEDevice::createServer();
+//     pServer->setCallbacks(new ServerCallbacks());
+//     NimBLEService* pDeadService = pServer->createService(SERVICE_UUID);
+//     NimBLECharacteristic* pBeefCharacteristic = pDeadService->createCharacteristic(
+//                                                READ_CHARACTERISTIC_UUID,
+//                                                NIMBLE_PROPERTY::READ |
+//                                                NIMBLE_PROPERTY::WRITE |
+//                                /** Require a secure connection for read and write access */
+//                                                NIMBLE_PROPERTY::READ_ENC |  // only allow reading if paired / encrypted
+//                                                NIMBLE_PROPERTY::WRITE_ENC   // only allow writing if paired / encrypted
+//                                               );
+//     pBeefCharacteristic->setValue("Burger");
+//     pBeefCharacteristic->setCallbacks(&chrCallbacks);
+//     /** Start the services when finished creating all Characteristics and Descriptors */
+//     pDeadService->start();
+//     NimBLEAdvertising* pAdvertising = NimBLEDevice::getAdvertising();
+//     /** Add the services to the advertisment data **/
+//     pAdvertising->addServiceUUID(pDeadService->getUUID());
+//     /** If your device is battery powered you may consider setting scan response
+//      *  to false as it will extend battery life at the expense of less data sent.
+//      */
+//     pAdvertising->setScanResponse(true);
+//     pAdvertising->start();
+//     Serial.println("Advertising Started");
 // }
 
 // void loop() {
-//   for (int j = 0; j < 255; j += 2) {
-//     for (int i = 0; i < LEDS_COUNT; i++) {
-//       strip.setLedColorData(i, strip.Wheel((i * 256 / LEDS_COUNT + j) & 255));
-//     }
-//     strip.show();
-//     delay(10);
-//   }
-// }
-
-// #include <FastLED.h>
-
-// // How many leds in your strip?
-// #define NUM_LEDS 1
-
-// // For led chips like WS2812, which have a data line, ground, and power, you just
-// // need to define DATA_PIN.  For led chipsets that are SPI based (four wires - data, clock,
-// // ground, and power), like the LPD8806 define both DATA_PIN and CLOCK_PIN
-// // Clock pin only needed for SPI based chipsets when not using hardware SPI
-// #define DATA_PIN 6
-
-// // Define the array of leds
-// CRGB leds[NUM_LEDS];
-
-// void setup() {
-//     // Uncomment/edit one of the following lines for your leds arrangement.
-//     // ## Clockless types ##
-//     // FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);  // GRB ordering is assumed
-//     // FastLED.addLeds<SM16703, DATA_PIN, RGB>(leds, NUM_LEDS);
-//     // FastLED.addLeds<TM1829, DATA_PIN, RGB>(leds, NUM_LEDS);
-//     // FastLED.addLeds<TM1812, DATA_PIN, RGB>(leds, NUM_LEDS);
-//     // FastLED.addLeds<TM1809, DATA_PIN, RGB>(leds, NUM_LEDS);
-//     // FastLED.addLeds<TM1804, DATA_PIN, RGB>(leds, NUM_LEDS);
-//     // FastLED.addLeds<TM1803, DATA_PIN, RGB>(leds, NUM_LEDS);
-//     // FastLED.addLeds<UCS1903, DATA_PIN, RGB>(leds, NUM_LEDS);
-//     // FastLED.addLeds<UCS1903B, DATA_PIN, RGB>(leds, NUM_LEDS);
-//     // FastLED.addLeds<UCS1904, DATA_PIN, RGB>(leds, NUM_LEDS);
-//     // FastLED.addLeds<UCS2903, DATA_PIN, RGB>(leds, NUM_LEDS);
-//     // FastLED.addLeds<WS2812, DATA_PIN, RGB>(leds, NUM_LEDS);  // GRB ordering is typical
-//     // FastLED.addLeds<WS2852, DATA_PIN, RGB>(leds, NUM_LEDS);  // GRB ordering is typical
-//     FastLED.addLeds<WS2812B, DATA_PIN, RGB>(leds, NUM_LEDS);  // GRB ordering is typical
-//     // FastLED.addLeds<GS1903, DATA_PIN, RGB>(leds, NUM_LEDS);
-//     // FastLED.addLeds<SK6812, DATA_PIN, RGB>(leds, NUM_LEDS);  // GRB ordering is typical
-//     // FastLED.addLeds<SK6822, DATA_PIN, RGB>(leds, NUM_LEDS);
-//     // FastLED.addLeds<APA106, DATA_PIN, RGB>(leds, NUM_LEDS);
-//     // FastLED.addLeds<PL9823, DATA_PIN, RGB>(leds, NUM_LEDS);
-//     // FastLED.addLeds<SK6822, DATA_PIN, RGB>(leds, NUM_LEDS);
-//     // FastLED.addLeds<WS2811, DATA_PIN, RGB>(leds, NUM_LEDS);
-//     // FastLED.addLeds<WS2813, DATA_PIN, RGB>(leds, NUM_LEDS);
-//     // FastLED.addLeds<APA104, DATA_PIN, RGB>(leds, NUM_LEDS);
-//     // FastLED.addLeds<WS2811_400, DATA_PIN, RGB>(leds, NUM_LEDS);
-//     // FastLED.addLeds<GE8822, DATA_PIN, RGB>(leds, NUM_LEDS);
-//     // FastLED.addLeds<GW6205, DATA_PIN, RGB>(leds, NUM_LEDS);
-//     // FastLED.addLeds<GW6205_400, DATA_PIN, RGB>(leds, NUM_LEDS);
-//     // FastLED.addLeds<LPD1886, DATA_PIN, RGB>(leds, NUM_LEDS);
-//     // FastLED.addLeds<LPD1886_8BIT, DATA_PIN, RGB>(leds, NUM_LEDS);
-//     // ## Clocked (SPI) types ##
-//     // FastLED.addLeds<LPD6803, DATA_PIN, CLOCK_PIN, RGB>(leds, NUM_LEDS);  // GRB ordering is typical
-//     // FastLED.addLeds<LPD8806, DATA_PIN, CLOCK_PIN, RGB>(leds, NUM_LEDS);  // GRB ordering is typical
-//     // FastLED.addLeds<WS2801, DATA_PIN, CLOCK_PIN, RGB>(leds, NUM_LEDS);
-//     // FastLED.addLeds<WS2803, DATA_PIN, CLOCK_PIN, RGB>(leds, NUM_LEDS);
-//     // FastLED.addLeds<SM16716, DATA_PIN, CLOCK_PIN, RGB>(leds, NUM_LEDS);
-//     // FastLED.addLeds<P9813, DATA_PIN, CLOCK_PIN, RGB>(leds, NUM_LEDS);  // BGR ordering is typical
-//     // FastLED.addLeds<DOTSTAR, DATA_PIN, CLOCK_PIN, RGB>(leds, NUM_LEDS);  // BGR ordering is typical
-//     // FastLED.addLeds<APA102, DATA_PIN, CLOCK_PIN, RGB>(leds, NUM_LEDS);  // BGR ordering is typical
-//     // FastLED.addLeds<SK9822, DATA_PIN, CLOCK_PIN, RGB>(leds, NUM_LEDS);  // BGR ordering is typical
-// }
-
-// void loop() {
-//   // Turn the LED on, then pause
-//   leds[0] = CRGB::Red;
-//   FastLED.show();
-//   delay(500);
-//   // Now turn the LED off, then pause
-//   leds[0] = CRGB::Black;
-//   FastLED.show();
-//   delay(500);
-// }
-
-// #include "Freenove_WS2812_Lib_for_ESP32.h"
-
-// #define WS2812_PIN	6
-
-// Freenove_ESP32_WS2812 strip = Freenove_ESP32_WS2812(1, WS2812_PIN, 0, TYPE_GRB);
-
-// u8 m_color[5][3] = { {255, 0, 0}, {0, 255, 0}, {0, 0, 255}, {255, 255, 255}, {0, 0, 0} };
-// int delayval = 100;
-
-// void setup() {
-// 	strip.begin();
-// 	strip.setBrightness(10);
-// }
-// void loop() {
-// 	for (int j = 0; j < 5; j++) {
-//     strip.setLedColorData(0, m_color[j][0], m_color[j][1], m_color[j][2]);
-//     strip.show();
-//     delay(delayval);
-// 		delay(500);
-// 	}
-// }
-
-
-// #include <Wire.h>
-
-// void setup()
-// {
-//   Wire.setPins(SDA_PIN, SCL_PIN);
-//   Wire.begin(-1, -1, I2C_BAUDRATE);
-//   Serial.begin(115200);
-//   Serial.println("nI2C Scanner");
-// }
-
-// void loop()
-// {
-//   byte error, address;
-//   int nDevices;
-//   Serial.println("Scanning...");
-//   nDevices = 0;
-//   for(address = 1; address < 127; address++ ) 
-//   {
-//     Wire.beginTransmission(address);
-//     error = Wire.endTransmission();
-//     if (error == 0)
-//     {
-//       Serial.print("I2C device found at address 0x");
-//       if (address<16) 
-//         Serial.print("0");
-//       Serial.print(address,HEX);
-//       Serial.println("  !");
-//       nDevices++;
-//     }
-//     else if (error==4) 
-//     {
-//       Serial.print("Unknow error at address 0x");
-//       if (address<16) 
-//         Serial.print("0");
-//       Serial.println(address,HEX);
-//     }    
-//   }
-//   if (nDevices == 0)
-//     Serial.println("No I2C devices foundn");
-//   else
-//     Serial.println("donen");
-//   delay(1000);           // wait 5 seconds for next scan
+//   delay(2000);
 // }

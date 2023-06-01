@@ -10,18 +10,18 @@ vector<Task_Control_Block> Task_List{
 
 };
 
-
-//{mod type ,r,g,b}
-
 TimerHandle_t Sleep_Timer;
 bool device_is_connect = false;
 bool bluetooth_is_connect = false;
 bool ready_to_sleep = false;
+bool Check_Sensor_OK = false;
+unsigned int last_time;
 
-
-void LED_task(void *param){
+void LED_task(void *param)
+{
     WS2812_control = xQueueCreate(5, sizeof(WS2812_Blink_typedef));
-    if(WS2812_control == NULL){
+    if (WS2812_control == NULL)
+    {
         log_e("WS2812_control create failed!");
         ESP_ERROR_CHECK(ESP_FAIL);
     }
@@ -32,11 +32,12 @@ void LED_task(void *param){
     led_mode.b = 255;
     xQueueSend(WS2812_control, &led_mode, portMAX_DELAY);
 
-	Task_Control_Block *TCB = (Task_Control_Block *)param;
+    Task_Control_Block *TCB = (Task_Control_Block *)param;
     while (TCB->status == Running)
     {
         WS2812_Blink_typedef element;
-        if(xQueueReceive(WS2812_control, &element, portMAX_DELAY)){
+        if (xQueueReceive(WS2812_control, &element, portMAX_DELAY))
+        {
             LED_blink(element);
             delay(300);
         }
@@ -67,7 +68,7 @@ void Sleep_Timer_task(void *Parameter)
             vTaskDelete(Task_List[i].handle);
         }
         close_LED();
-         // GPIO0-GPIO3
+        // GPIO0-GPIO3
         const uint64_t WAKEUP_HIGH_PIN_BITMASK = 0b001111;
         for (int i = 0; i < 6; i++)
         {
@@ -102,9 +103,134 @@ void Task_Init()
         xTaskCreate(Task_List.at(i).task, Task_List.at(i).name, 2048, (void *)&Task_List.at(i), Task_List.at(i).Priority, &Task_List.at(i).handle);
     }
     Sleep_Timer = xTimerCreate("Sleep_Timer",            /*任务名字*/
-                               10000 / portTICK_RATE_MS, /*设置时钟周期:1000ms = 10s*/
+                               60000 / portTICK_RATE_MS, /*设置时钟周期:60000ms = 60s*/
                                pdTRUE,                   /*pdTRUE周期调用,pdFALSE:单次调用*/
                                (void *)2,                /*计时器优先级*/
                                Sleep_Timer_task);        /*定时回调函数*/
     xTimerStart(Sleep_Timer, 0);                         // 打开定时器
+}
+
+void hardware_error()
+{
+    Check_Sensor_OK = false;
+    if (millis() - last_time > 8000)
+    {
+        // 每隔3秒闪烁一次LED（红色）
+        WS2812_Blink_typedef led_mode;
+        led_mode.WS2812_Blink_Mode = Double_flashing;
+        led_mode.r = 255;
+        led_mode.g = 0;
+        led_mode.b = 0;
+        xQueueSend(WS2812_control, &led_mode, portMAX_DELAY);
+        last_time = millis();
+    }
+}
+
+void update_ble_data()
+{
+    if (!bluetooth_is_connect)
+    {
+        return;
+    }
+    if (Gyro_sensor_Characteristic == NULL)
+    {
+        return;
+    }
+    if (PRESS1_sensor_Characteristic == NULL)
+    {
+        return;
+    }
+    if (PRESS2_sensor_Characteristic == NULL)
+    {
+        return;
+    }
+    if (PRESS3_sensor_Characteristic == NULL)
+    {
+        return;
+    }
+
+    Status_sensor_Characteristic->setValue("1");
+
+    
+
+    char buff[20] = {0};
+    Gyroscope_Packet gyroscope_packet = gyroscope_getData();
+    sprintf(buff,"%.2f|%.2f|%.2f", gyroscope_packet.gyro.gyro.x, gyroscope_packet.gyro.gyro.y, gyroscope_packet.gyro.gyro.z);
+    Gyro_sensor_Characteristic->setValue(buff);
+
+    char buff2[20] = {0};
+    PRESSURE_STATUS_CODE status;
+    Pressure_Packet pressure_packet;
+    uint16_t benchmark_Val[CHANNEL_NUM];
+    if ((status = pressure1.getCalibrateVal(benchmark_Val)) >= 0)
+    {
+        if ((status = pressure1.getData(pressure_packet)) >= 0)
+        {
+            for (int i = 0; i < CHANNEL_NUM; i++)
+            {
+                buff2[i] = highByte(pressure_packet.datas.at(i)) - highByte(benchmark_Val[i]);
+            }
+        }
+        else
+        {
+            log_e("%s", pressure1.message(status).c_str());
+        }
+    }
+    else
+    {
+        log_e("%s", pressure1.message(status).c_str());
+    }
+
+    PRESS1_sensor_Characteristic->setValue(buff2);
+
+    char buff3[20] = {0};
+    PRESSURE_STATUS_CODE status2;
+    Pressure_Packet pressure_packet2;
+    uint16_t benchmark_Val2[CHANNEL_NUM];
+    if ((status2 = pressure1.getCalibrateVal(benchmark_Val2)) >= 0)
+    {
+        if ((status2 = pressure1.getData(pressure_packet2)) >= 0)
+        {
+            for (int i = 0; i < CHANNEL_NUM; i++)
+            {
+                buff3[i] = highByte(pressure_packet2.datas.at(i)) - highByte(benchmark_Val2[i]);
+            }
+        }
+        else
+        {
+            log_e("%s", pressure1.message(status2).c_str());
+        }
+    }
+    else
+    {
+        log_e("%s", pressure1.message(status2).c_str());
+    }
+
+    PRESS2_sensor_Characteristic->setValue(buff3);
+
+
+    char buff4[20] = {0};
+    PRESSURE_STATUS_CODE status3;
+    Pressure_Packet pressure_packet3;
+    uint16_t benchmark_Val3[CHANNEL_NUM];
+    if ((status3 = pressure1.getCalibrateVal(benchmark_Val3)) >= 0)
+    {
+        if ((status3 = pressure1.getData(pressure_packet3)) >= 0)
+        {
+            for (int i = 0; i < CHANNEL_NUM; i++)
+            {
+                buff4[i] = highByte(pressure_packet3.datas.at(i)) - highByte(benchmark_Val3[i]);
+            }
+        }
+        else
+        {
+            log_e("%s", pressure1.message(status3).c_str());
+        }
+    }
+    else
+    {
+        log_e("%s", pressure1.message(status3).c_str());
+    }
+
+    PRESS3_sensor_Characteristic->setValue(buff4);
 }

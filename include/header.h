@@ -8,8 +8,7 @@
 #include <FreeRTOSConfig.h>
 #include <nvs.h>
 #include <nvs_flash.h>
-#include <BLEDevice.h>
-#include <BLE2902.h>
+#include <NimBLEDevice.h>
 #include <Adafruit_ICM20X.h>
 #include <Adafruit_ICM20948.h>
 #include <sstream>

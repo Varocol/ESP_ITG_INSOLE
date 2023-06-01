@@ -8,6 +8,8 @@ extern QueueHandle_t WS2812_control;
 extern bool device_is_connect ;
 extern bool bluetooth_is_connect ;
 extern bool ready_to_sleep ;
+extern bool Check_Sensor_OK;
+extern unsigned int last_time;
 
 // 用于控制任务的进行和结束
 typedef enum
@@ -27,5 +29,7 @@ typedef struct
 void LED_task(void *Parameter);
 void Sleep_Timer_task(void *Parameter);
 void Task_Init();
+void hardware_error();
+void update_ble_data();
 
 #endif // !__TASK_H

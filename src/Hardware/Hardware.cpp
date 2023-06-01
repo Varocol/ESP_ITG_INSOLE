@@ -4,6 +4,68 @@
 String *serial_msg;
 bool certification = false;
 
+/**
+ * @brief  Pressure Calibrate
+ * @param  pressure_id      Pressure Id
+ * @retval data or message
+ */
+String Pressure_Calibrate(const Pressure_Id &pressure_id)
+{
+    PRESSURE_STATUS_CODE status;
+    Pressure *pressure;
+    String msg;
+    switch (pressure_id)
+    {
+    case PRESSURE1:
+        pressure = &pressure1;
+        break;
+    case PRESSURE2:
+        pressure = &pressure2;
+        break;
+    case PRESSURE3:
+        pressure = &pressure3;
+        break;
+    }
+    status = pressure->calibration(msg);
+    if (status >= 0)
+    {
+        return msg + "\r\n" + pressure->message(status);
+    }
+    return pressure->message(status);
+}
+
+void check_Pressure_Calibrate()
+{
+    Preferences prefs;
+    String Pressure_Calibrate_temp_str = "";
+    if (prefs.begin(CALIBRATE_VALUE_SPACENAME) == true)
+    {
+        if (!prefs.isKey(PRESSURE1_CALIBRATE_VALUE_KEY))
+        {
+            Pressure_Calibrate_temp_str = Pressure_Calibrate(PRESSURE1);
+            log_i("%s", Pressure_Calibrate_temp_str.c_str());
+        }
+        if (!prefs.isKey(PRESSURE2_CALIBRATE_VALUE_KEY))
+        {
+            Pressure_Calibrate_temp_str = Pressure_Calibrate(PRESSURE2);
+            log_i("%s", Pressure_Calibrate_temp_str.c_str());
+        }
+        if (!prefs.isKey(PRESSURE3_CALIBRATE_VALUE_KEY))
+        {
+            Pressure_Calibrate_temp_str = Pressure_Calibrate(PRESSURE3);
+            log_i("%s", Pressure_Calibrate_temp_str.c_str());
+        }
+    }
+    else
+    {
+        Pressure_Calibrate_temp_str = Pressure_Calibrate(PRESSURE1);
+        log_i("%s", Pressure_Calibrate_temp_str.c_str());
+        Pressure_Calibrate_temp_str = Pressure_Calibrate(PRESSURE2);
+        log_i("%s", Pressure_Calibrate_temp_str.c_str());
+        Pressure_Calibrate_temp_str = Pressure_Calibrate(PRESSURE3);
+        log_i("%s", Pressure_Calibrate_temp_str.c_str());
+    }
+}
 
 /**
  * @brief  Serial Devices Initialization
@@ -69,19 +131,19 @@ bool Pressure_Init()
 {
     PRESSURE_STATUS_CODE status;
     status = pressure1.init();
-    log_i("%s", pressure1.message(status).c_str());
+    log_d("%s", pressure1.message(status).c_str());
     if (status < 0)
     {
         return false;
     }
     status = pressure2.init();
-    log_i("%s", pressure2.message(status).c_str());
+    log_d("%s", pressure2.message(status).c_str());
     if (status < 0)
     {
         return false;
     }
     status = pressure3.init();
-    log_i("%s", pressure3.message(status).c_str());
+    log_d("%s", pressure3.message(status).c_str());
     if (status < 0)
     {
         return false;
@@ -97,7 +159,7 @@ bool Pressure_Init()
 bool Gyroscope_Init()
 {
     GYROSCOPE_STATUS_CODE status = gyroscope_init();
-    log_i("%s", gyroscope_message(status).c_str());
+    log_d("%s", gyroscope_message(status).c_str());
     if (status < 0)
     {
         return false;
@@ -114,7 +176,7 @@ void Hardware_Init()
 {
     init_LED();
     Wire_Init();
-    pinMode(1,INPUT_PULLUP);
+    pinMode(1, INPUT_PULLUP);
     // if (!Wire_Init())
     // {
     //     return false;
@@ -149,7 +211,7 @@ void Message_Printf(const String &msg)
     // Serial side
     Serial.printf(msg.c_str());
     // Blutooth side
-    bluetooth_sendmessage(msg);
+    // bluetooth_sendmessage(msg);
 }
 
 /**
@@ -290,4 +352,3 @@ bool Check_Sensor()
     }
     return true;
 }
-

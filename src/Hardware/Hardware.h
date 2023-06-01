@@ -23,6 +23,7 @@ bool Pressure_Init();
 bool Gyroscope_Init();
 void Hardware_Init();
 bool Check_Sensor();
+void check_Pressure_Calibrate();
 // Serial_Callback
 // Output Interface
 
