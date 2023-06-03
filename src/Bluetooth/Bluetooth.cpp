@@ -58,11 +58,11 @@ void int_NimBLE()
     pServer = NimBLEDevice::createServer();
     pServer->setCallbacks(new ServerCallbacks());
 
-    NimBLEService *Device_Information_Service  = pServer->createService(Device_Information_Service_UUID);
+    NimBLEService *Device_Information_Service = pServer->createService(Device_Information_Service_UUID);
     NimBLECharacteristic *Serial_Number_Characteristic = Device_Information_Service->createCharacteristic(
         Serial_Number_CHARACTERISTIC_UUID,
         NIMBLE_PROPERTY::READ);
-    char macStr[18] = { 0 };
+    char macStr[18] = {0};
     uint8_t mac[6];
     esp_read_mac(mac, ESP_MAC_BT);
     sprintf(macStr, "%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
@@ -73,12 +73,21 @@ void int_NimBLE()
         NIMBLE_PROPERTY::READ);
     Firmware_Revision_Characteristic->setValue(Firmware_Revision);
 
-     NimBLECharacteristic *Manufacturer_Name_Characteristic = Device_Information_Service->createCharacteristic(
+    NimBLECharacteristic *Manufacturer_Name_Characteristic = Device_Information_Service->createCharacteristic(
         Manufacturer_Name_CHARACTERISTIC_UUID,
         NIMBLE_PROPERTY::READ);
     Manufacturer_Name_Characteristic->setValue(Manufacturer_Name);
 
     Device_Information_Service->start();
+
+    NimBLEService *Battery_service_Service = pServer->createService(Battery_service_UUID);
+
+    NimBLECharacteristic *Battery_Level_Characteristic = Battery_service_Service->createCharacteristic(
+        Battery_Level_CHARACTERISTIC_UUID,
+        NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY);
+    Battery_Level_Characteristic->setValue(Manufacturer_Name);
+
+    Battery_service_Service->start();
 
     NimBLEService *READ_sensor_Service = pServer->createService(SERVICE_UUID);
 
@@ -126,6 +135,7 @@ void int_NimBLE()
 
     NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
     pAdvertising->addServiceUUID(READ_sensor_Service->getUUID());
+    pAdvertising->addServiceUUID(Battery_service_Service->getUUID());
     pAdvertising->addServiceUUID(Device_Information_Service->getUUID());
     pAdvertising->setScanResponse(true);
     pAdvertising->start();
