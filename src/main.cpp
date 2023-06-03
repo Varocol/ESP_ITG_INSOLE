@@ -130,10 +130,11 @@ void loop()
   }
   else
   {
+    set_ble_status("NO_CONNECT");
     Check_Sensor_OK = false;
     if (millis() - last_time > 3000)
     {
-      // 每隔3秒闪烁一次LED（红色）
+      // 呼吸黄灯
       WS2812_Blink_typedef led_mode;
       led_mode.WS2812_Blink_Mode = Breathe;
       led_mode.r = 233;

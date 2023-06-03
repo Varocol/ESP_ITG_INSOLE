@@ -13,8 +13,12 @@
 #define SDA_PIN 7
 #define SCL_PIN 8
 #define I2C_BAUDRATE 1000000UL
-
 #define WS2812_PIN 6
+
+#define DEVICE_NAME       "易滑邦-智能鞋垫"
+#define Firmware_Revision "2.0.1"
+#define Manufacturer_Name "BHU AI-EN"
+
 
 
 // Hardware Initialization

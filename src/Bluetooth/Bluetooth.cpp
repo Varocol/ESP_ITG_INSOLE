@@ -4,6 +4,9 @@ static NimBLEServer *pServer;
 
 NimBLECharacteristic *Status_sensor_Characteristic;
 NimBLECharacteristic *Gyro_sensor_Characteristic;
+NimBLECharacteristic *Accel_sensor_Characteristic;
+NimBLECharacteristic *Magn_sensor_Characteristic;
+NimBLECharacteristic *Temp_sensor_Characteristic;
 NimBLECharacteristic *PRESS1_sensor_Characteristic;
 NimBLECharacteristic *PRESS2_sensor_Characteristic;
 NimBLECharacteristic *PRESS3_sensor_Characteristic;
@@ -45,7 +48,6 @@ class ServerCallbacks : public NimBLEServerCallbacks
     };
 };
 
-
 static NimBLECharacteristicCallbacks READ_sensor_chrCallbacks;
 
 void int_NimBLE()
@@ -55,6 +57,29 @@ void int_NimBLE()
     NimBLEDevice::setSecurityAuth(BLE_SM_PAIR_AUTHREQ_SC);
     pServer = NimBLEDevice::createServer();
     pServer->setCallbacks(new ServerCallbacks());
+
+    NimBLEService *Device_Information_Service  = pServer->createService(Device_Information_Service_UUID);
+    NimBLECharacteristic *Serial_Number_Characteristic = Device_Information_Service->createCharacteristic(
+        Serial_Number_CHARACTERISTIC_UUID,
+        NIMBLE_PROPERTY::READ);
+    char macStr[18] = { 0 };
+    uint8_t mac[6];
+    esp_read_mac(mac, ESP_MAC_BT);
+    sprintf(macStr, "%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    Serial_Number_Characteristic->setValue(macStr);
+
+    NimBLECharacteristic *Firmware_Revision_Characteristic = Device_Information_Service->createCharacteristic(
+        Firmware_Revision_CHARACTERISTIC_UUID,
+        NIMBLE_PROPERTY::READ);
+    Firmware_Revision_Characteristic->setValue(Firmware_Revision);
+
+     NimBLECharacteristic *Manufacturer_Name_Characteristic = Device_Information_Service->createCharacteristic(
+        Manufacturer_Name_CHARACTERISTIC_UUID,
+        NIMBLE_PROPERTY::READ);
+    Manufacturer_Name_Characteristic->setValue(Manufacturer_Name);
+
+    Device_Information_Service->start();
+
     NimBLEService *READ_sensor_Service = pServer->createService(SERVICE_UUID);
 
     Status_sensor_Characteristic = READ_sensor_Service->createCharacteristic(
@@ -67,11 +92,26 @@ void int_NimBLE()
         NIMBLE_PROPERTY::READ);
     Gyro_sensor_Characteristic->setCallbacks(&READ_sensor_chrCallbacks);
 
+    Accel_sensor_Characteristic = READ_sensor_Service->createCharacteristic(
+        Accel_sensor_CHARACTERISTIC_UUID,
+        NIMBLE_PROPERTY::READ);
+    Accel_sensor_Characteristic->setCallbacks(&READ_sensor_chrCallbacks);
+
+    Magn_sensor_Characteristic = READ_sensor_Service->createCharacteristic(
+        Magn_sensor_CHARACTERISTIC_UUID,
+        NIMBLE_PROPERTY::READ);
+    Magn_sensor_Characteristic->setCallbacks(&READ_sensor_chrCallbacks);
+
+    Temp_sensor_Characteristic = READ_sensor_Service->createCharacteristic(
+        Temp_sensor_CHARACTERISTIC_UUID,
+        NIMBLE_PROPERTY::READ);
+    Temp_sensor_Characteristic->setCallbacks(&READ_sensor_chrCallbacks);
+
     PRESS1_sensor_Characteristic = READ_sensor_Service->createCharacteristic(
         PRESS1_sensor_CHARACTERISTIC_UUID,
         NIMBLE_PROPERTY::READ);
     PRESS1_sensor_Characteristic->setCallbacks(&READ_sensor_chrCallbacks);
-    
+
     PRESS2_sensor_Characteristic = READ_sensor_Service->createCharacteristic(
         PRESS2_sensor_CHARACTERISTIC_UUID,
         NIMBLE_PROPERTY::READ);
@@ -83,8 +123,10 @@ void int_NimBLE()
     PRESS3_sensor_Characteristic->setCallbacks(&READ_sensor_chrCallbacks);
 
     READ_sensor_Service->start();
+
     NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
     pAdvertising->addServiceUUID(READ_sensor_Service->getUUID());
+    pAdvertising->addServiceUUID(Device_Information_Service->getUUID());
     pAdvertising->setScanResponse(true);
     pAdvertising->start();
 }

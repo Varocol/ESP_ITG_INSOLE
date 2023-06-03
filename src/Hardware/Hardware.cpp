@@ -129,23 +129,35 @@ void Wire_Init()
  */
 bool Pressure_Init()
 {
-    PRESSURE_STATUS_CODE status;
-    status = pressure1.init();
-    log_d("%s", pressure1.message(status).c_str());
-    if (status < 0)
+    PRESSURE_STATUS_CODE press_status;
+    GYROSCOPE_STATUS_CODE gyro_status;
+    String status_string;
+    press_status = pressure1.init();
+    log_d("%s", pressure1.message(press_status).c_str());
+    if (press_status < 0)
     {
+        set_ble_status("Press1_Error_" + press_status);
         return false;
     }
-    status = pressure2.init();
-    log_d("%s", pressure2.message(status).c_str());
-    if (status < 0)
+    press_status = pressure2.init();
+    log_d("%s", pressure2.message(press_status).c_str());
+    if (press_status < 0)
     {
+        set_ble_status("Press2_Error_" + press_status);
         return false;
     }
-    status = pressure3.init();
-    log_d("%s", pressure3.message(status).c_str());
-    if (status < 0)
+    press_status = pressure3.init();
+    log_d("%s", pressure3.message(press_status).c_str());
+    if (press_status < 0)
     {
+        set_ble_status("Press3_Error_" + press_status);
+        return false;
+    }
+    gyro_status = gyroscope_init();
+    log_d("%s", gyroscope_message(gyro_status).c_str());
+    if (gyro_status < 0)
+    {
+        set_ble_status("Gyro_Error_" + gyro_status);
         return false;
     }
     return true;
@@ -162,6 +174,7 @@ bool Gyroscope_Init()
     log_d("%s", gyroscope_message(status).c_str());
     if (status < 0)
     {
+        set_ble_status("Gyro_Error_");
         return false;
     }
     return true;

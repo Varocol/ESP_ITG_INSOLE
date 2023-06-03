@@ -31,5 +31,6 @@ void Sleep_Timer_task(void *Parameter);
 void Task_Init();
 void hardware_error();
 void update_ble_data();
+void set_ble_status(String status);
 
 #endif // !__TASK_H

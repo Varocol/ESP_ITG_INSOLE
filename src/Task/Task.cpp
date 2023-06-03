@@ -126,37 +126,43 @@ void hardware_error()
     }
 }
 
+void set_ble_status(String status)
+{
+    if (!Status_sensor_Characteristic)
+    {
+        return;
+    }
+    Status_sensor_Characteristic->setValue(status);
+}
+
 void update_ble_data()
 {
     if (!bluetooth_is_connect)
     {
         return;
     }
-    if (Gyro_sensor_Characteristic == NULL)
-    {
-        return;
-    }
-    if (PRESS1_sensor_Characteristic == NULL)
-    {
-        return;
-    }
-    if (PRESS2_sensor_Characteristic == NULL)
-    {
-        return;
-    }
-    if (PRESS3_sensor_Characteristic == NULL)
-    {
-        return;
-    }
 
-    Status_sensor_Characteristic->setValue("1");
-
-    
+    set_ble_status("READY");
 
     char buff[20] = {0};
     Gyroscope_Packet gyroscope_packet = gyroscope_getData();
-    sprintf(buff,"%.2f|%.2f|%.2f", gyroscope_packet.gyro.gyro.x, gyroscope_packet.gyro.gyro.y, gyroscope_packet.gyro.gyro.z);
+    sprintf(buff, "%.2f|%.2f|%.2f", gyroscope_packet.gyro.gyro.x, gyroscope_packet.gyro.gyro.y, gyroscope_packet.gyro.gyro.z);
     Gyro_sensor_Characteristic->setValue(buff);
+
+    char buff5[20] = {0};
+    gyroscope_packet = gyroscope_getData();
+    sprintf(buff5, "%.2f|%.2f|%.2f", gyroscope_packet.accel.acceleration.x, gyroscope_packet.accel.acceleration.y, gyroscope_packet.accel.acceleration.z);
+    Accel_sensor_Characteristic->setValue(buff5);
+
+    char buff6[20] = {0};
+    gyroscope_packet = gyroscope_getData();
+    sprintf(buff6, "%.2f|%.2f|%.2f", gyroscope_packet.mag.magnetic.x, gyroscope_packet.mag.magnetic.y, gyroscope_packet.mag.magnetic.z);
+    Magn_sensor_Characteristic->setValue(buff6);
+
+    char buff7[20] = {0};
+    gyroscope_packet = gyroscope_getData();
+    sprintf(buff7, "%f", gyroscope_packet.temp.temperature);
+    Temp_sensor_Characteristic->setValue(buff7);
 
     char buff2[20] = {0};
     PRESSURE_STATUS_CODE status;
@@ -207,7 +213,6 @@ void update_ble_data()
     }
 
     PRESS2_sensor_Characteristic->setValue(buff3);
-
 
     char buff4[20] = {0};
     PRESSURE_STATUS_CODE status3;
