@@ -81,6 +81,7 @@ bool Wire_Init()
 #endif
     return true;
 }
+
 /**
  * @brief  Pressure Sensors Initialization
  * @param  None
@@ -157,7 +158,7 @@ bool Hardware_Init()
  */
 void Message_Println(const String &msg)
 {
-    Message_Printf(msg + "\r\n");
+    Message_Printf(msg);
 }
 
 /**
@@ -167,13 +168,24 @@ void Message_Println(const String &msg)
  */
 void Message_Printf(const String &msg)
 {
+#ifdef INSOLE_SERIAL_OUTPUT
     // Serial side
-    Serial.printf(msg.c_str());
+    Serial.printf((msg + "\r\n").c_str());
+#endif
     // Blutooth side
     bluetooth_sendmessage(msg);
 }
 
-#if Debug_Mode
+/**
+ * @brief  Interrupt Initialization
+ * @param  None
+ * @retval None
+ */
+void Interrupt_Init()
+{
+}
+
+#ifdef INSOLE_DEBUG_MODE
 /**
  * @brief  Pressure Get Data
  * @param  pressure_id      Pressure Id
@@ -430,6 +442,16 @@ String Gyroscope_EnableGyrolDLPF(const bool &enable, const icm20x_gyro_cutoff_t 
 }
 
 /**
+ * @brief  Gyroscope GetData
+ * @param  None
+ * @retval data or message
+ */
+String Gyroscope_GetData()
+{
+    return gyroscope_message(gyroscope_getData());
+}
+
+/**
  * @brief  Pressure-clear nvs namespace
  * @param  None
  * @retval message
@@ -448,19 +470,9 @@ String clear_nvs_namespace()
     }
     return "clear namespace success";
 }
-
 #endif
 
-/**
- * @brief  Gyroscope GetData
- * @param  None
- * @retval data or message
- */
-String Gyroscope_GetData()
-{
-    return gyroscope_message(gyroscope_getData());
-}
-
+// TODO GOOGLE PR
 /**
  * @brief  Get data in json style(include all sensors' data)
  * @param  None
@@ -468,90 +480,162 @@ String Gyroscope_GetData()
  */
 String data_json()
 {
+    //     Pressure_Packet pressure_packet;
+    //     Gyroscope_Packet gyroscope_packet;
+    //     PRESSURE_STATUS_CODE status;
+    //     uint16_t benchmark_Val[CHANNEL_NUM];
+    //     // json document object
+    //     DynamicJsonDocument doc(2048);
+
+    //     // add pressure1 datas
+    //     JsonObject pressure1_json = doc.createNestedObject("PRESSURE1");
+    //     JsonArray pressure1_data_array = pressure1_json.createNestedArray("datas");
+    //     status = pressure1.getData(pressure_packet);
+    //     if (status < 0)
+    //     {
+    //         return pressure1.message(status);
+    //     }
+    //     status = pressure1.getCalibrateVal(benchmark_Val);
+    //     if (status < 0)
+    //     {
+    //         return pressure1.message(status);
+    //     }
+    //     for (int i = 0; i < CHANNEL_NUM; i++)
+    //     {
+    //         pressure1_data_array.add(highByte(pressure_packet.datas.at(i)) - highByte(benchmark_Val[i]));
+    //     }
+
+    //     // add pressure2 datas
+    //     JsonObject pressure2_json = doc.createNestedObject("PRESSURE2");
+    //     JsonArray pressure2_data_array = pressure2_json.createNestedArray("datas");
+    //     status = pressure2.getData(pressure_packet);
+    //     if (status < 0)
+    //     {
+    //         return pressure2.message(status);
+    //     }
+    //     status = pressure2.getCalibrateVal(benchmark_Val);
+    //     if (status < 0)
+    //     {
+    //         return pressure2.message(status);
+    //     }
+    //     for (int i = 0; i < CHANNEL_NUM; i++)
+    //     {
+    //         pressure2_data_array.add(highByte(pressure_packet.datas.at(i)) - highByte(benchmark_Val[i]));
+    //     }
+
+    //     // add pressure3 datas
+    //     JsonObject pressure3_json = doc.createNestedObject("PRESSURE3");
+    //     JsonArray pressure3_data_array = pressure3_json.createNestedArray("datas");
+    //     status = pressure3.getData(pressure_packet);
+    //     if (status < 0)
+    //     {
+    //         return pressure3.message(status);
+    //     }
+    //     status = pressure3.getCalibrateVal(benchmark_Val);
+    //     if (status < 0)
+    //     {
+    //         return pressure3.message(status);
+    //     }
+    //     for (int i = 0; i < CHANNEL_NUM; i++)
+    //     {
+    //         pressure3_data_array.add(highByte(pressure_packet.datas.at(i)) - highByte(benchmark_Val[i]));
+    //     }
+
+    //     // add gyroscope data
+    //     gyroscope_packet = gyroscope_getData();
+    //     JsonObject gyroscope_json = doc.createNestedObject("GYROSCOPE");
+    //     JsonObject gyroscope_datas_json = gyroscope_json.createNestedObject("datas");
+    //     JsonObject gyroscope_accel_json = gyroscope_datas_json.createNestedObject("accel");
+    //     gyroscope_accel_json["x"] = gyroscope_packet.accel.acceleration.x;
+    //     gyroscope_accel_json["y"] = gyroscope_packet.accel.acceleration.y;
+    //     gyroscope_accel_json["z"] = gyroscope_packet.accel.acceleration.z;
+
+    //     JsonObject gyroscope_gyro_json = gyroscope_datas_json.createNestedObject("gyro");
+    //     gyroscope_gyro_json["x"] = gyroscope_packet.gyro.gyro.x;
+    //     gyroscope_gyro_json["y"] = gyroscope_packet.gyro.gyro.y;
+    //     gyroscope_gyro_json["z"] = gyroscope_packet.gyro.gyro.z;
+
+    //     JsonObject gyroscope_mag_json = gyroscope_datas_json.createNestedObject("mag");
+    //     gyroscope_mag_json["x"] = gyroscope_packet.mag.magnetic.x;
+    //     gyroscope_mag_json["y"] = gyroscope_packet.mag.magnetic.y;
+    //     gyroscope_mag_json["z"] = gyroscope_packet.mag.magnetic.z;
+
+    //     gyroscope_datas_json["temp"] = gyroscope_packet.temp.temperature;
+
+    //     String json;
+    // #ifdef INSOLE_JSON_PRETTY
+    //     serializeJsonPretty(doc, json);
+    // #else
+    //     serializeJson(doc, json);
+    // #endif
+    //     return json;
     Pressure_Packet pressure_packet;
-    Gyroscope_Packet gyroscope_packet;
-    PRESSURE_STATUS_CODE status;
+    Gyroscope_Packet gyroscope_packet = gyroscope_getData();
     uint16_t benchmark_Val[CHANNEL_NUM];
-    // json document object
-    DynamicJsonDocument doc(2048);
+    String result;
+    result = "AX|";
+    result += gyroscope_packet.accel.acceleration.x;
+    Message_Println(result);
+    result = "AY|";
+    result += gyroscope_packet.accel.acceleration.y;
+    Message_Println(result);
+    result = "AZ|";
+    result += gyroscope_packet.accel.acceleration.z;
+    Message_Println(result);
+    result = "GX|";
+    result += gyroscope_packet.gyro.gyro.x;
+    Message_Println(result);
+    result = "GY|";
+    result += gyroscope_packet.gyro.gyro.y;
+    Message_Println(result);
+    result = "GZ|";
+    result += gyroscope_packet.gyro.gyro.z;
+    Message_Println(result);
+    result = "MX|";
+    result += gyroscope_packet.mag.magnetic.x;
+    Message_Println(result);
+    result = "MY|";
+    result += gyroscope_packet.mag.magnetic.y;
+    Message_Println(result);
+    result = "MZ|";
+    result += gyroscope_packet.mag.magnetic.z;
+    Message_Println(result);
+    result = "TE|";
+    result += gyroscope_packet.temp.temperature;
+    Message_Println(result);
 
-    // add pressure1 datas
-    JsonObject pressure1_json = doc.createNestedObject("PRESSURE1");
-    JsonArray pressure1_data_array = pressure1_json.createNestedArray("datas");
-    status = pressure1.getData(pressure_packet);
-    if (status < 0)
-    {
-        return pressure1.message(status);
-    }
-    status = pressure1.getCalibrateVal(benchmark_Val);
-    if (status < 0)
-    {
-        return pressure1.message(status);
-    }
+    pressure1.getData(pressure_packet);
+    pressure1.getCalibrateVal(benchmark_Val);
     for (int i = 0; i < CHANNEL_NUM; i++)
     {
-        pressure1_data_array.add(highByte(pressure_packet.datas.at(i)) - highByte(benchmark_Val[i]));
+        result = "P1|";
+        result += i + 1;
+        result += '|';
+        result += highByte(pressure_packet.datas.at(i)) - highByte(benchmark_Val[i]);
+        // result += " ";
+        Message_Println(result);
     }
-
-    // add pressure2 datas
-    JsonObject pressure2_json = doc.createNestedObject("PRESSURE2");
-    JsonArray pressure2_data_array = pressure2_json.createNestedArray("datas");
-    status = pressure2.getData(pressure_packet);
-    if (status < 0)
-    {
-        return pressure2.message(status);
-    }
-    status = pressure2.getCalibrateVal(benchmark_Val);
-    if (status < 0)
-    {
-        return pressure2.message(status);
-    }
+    pressure2.getData(pressure_packet);
+    pressure2.getCalibrateVal(benchmark_Val);
     for (int i = 0; i < CHANNEL_NUM; i++)
     {
-        pressure2_data_array.add(highByte(pressure_packet.datas.at(i)) - highByte(benchmark_Val[i]));
+        result = "P2|";
+        result += i + 1;
+        result += '|';
+        result += highByte(pressure_packet.datas.at(i)) - highByte(benchmark_Val[i]);
+        Message_Println(result);
     }
-
-    // add pressure3 datas
-    JsonObject pressure3_json = doc.createNestedObject("PRESSURE3");
-    JsonArray pressure3_data_array = pressure3_json.createNestedArray("datas");
-    status = pressure3.getData(pressure_packet);
-    if (status < 0)
-    {
-        return pressure3.message(status);
-    }
-    status = pressure3.getCalibrateVal(benchmark_Val);
-    if (status < 0)
-    {
-        return pressure3.message(status);
-    }
+    pressure3.getData(pressure_packet);
+    pressure3.getCalibrateVal(benchmark_Val);
     for (int i = 0; i < CHANNEL_NUM; i++)
     {
-        pressure3_data_array.add(highByte(pressure_packet.datas.at(i)) - highByte(benchmark_Val[i]));
+        result = "P3|";
+        result += i + 1;
+        result += '|';
+        result += highByte(pressure_packet.datas.at(i)) - highByte(benchmark_Val[i]);
+        Message_Println(result);
     }
-
-    // add gyroscope data
-    gyroscope_packet = gyroscope_getData();
-    JsonObject gyroscope_json = doc.createNestedObject("GYROSCOPE");
-    JsonObject gyroscope_datas_json = gyroscope_json.createNestedObject("datas");
-    JsonObject gyroscope_accel_json = gyroscope_datas_json.createNestedObject("accel");
-    gyroscope_accel_json["x"] = gyroscope_packet.accel.acceleration.x;
-    gyroscope_accel_json["y"] = gyroscope_packet.accel.acceleration.y;
-    gyroscope_accel_json["z"] = gyroscope_packet.accel.acceleration.z;
-
-    JsonObject gyroscope_gyro_json = gyroscope_datas_json.createNestedObject("gyro");
-    gyroscope_gyro_json["x"] = gyroscope_packet.gyro.gyro.x;
-    gyroscope_gyro_json["y"] = gyroscope_packet.gyro.gyro.y;
-    gyroscope_gyro_json["z"] = gyroscope_packet.gyro.gyro.z;
-
-    JsonObject gyroscope_mag_json = gyroscope_datas_json.createNestedObject("mag");
-    gyroscope_mag_json["x"] = gyroscope_packet.mag.magnetic.x;
-    gyroscope_mag_json["y"] = gyroscope_packet.mag.magnetic.y;
-    gyroscope_mag_json["z"] = gyroscope_packet.mag.magnetic.z;
-
-    gyroscope_datas_json["temp"] = gyroscope_packet.temp.temperature;
-
-    String json;
-    serializeJson(doc, json);
-    // serializeJsonPretty(doc, json);
-    return json;
+    Message_Println(result);
+    delay(10);
+    return "";
 }

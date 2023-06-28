@@ -16,7 +16,7 @@ function_unit Function_unit[]
     {"menu",
      function_menu_Describe,
      function_menu_Callback},
-#if Debug_Mode
+#ifdef INSOLE_DEBUG_MODE
         {"Pressure1_GetData",
          Pressure1_GetData_Describe,
          Pressure1_GetData_Callback},
@@ -181,7 +181,7 @@ void function_menu_Describe()
         " list all functions and descriptions\r\n");
 }
 
-#if Debug_Mode
+#ifdef INSOLE_DEBUG_MODE
 
 void Pressure1_GetData_Describe()
 {
@@ -362,7 +362,7 @@ void function_menu_Callback(void *param)
     vTaskDelete(NULL);
 }
 
-#if Debug_Mode
+#ifdef INSOLE_DEBUG_MODE
 void Pressure1_GetData_Callback(void *param)
 {
     stringstream str;
@@ -374,7 +374,7 @@ void Pressure1_GetData_Callback(void *param)
         str.clear();
         str.str("");
         str << Pressure_GetData(PRESSURE1).c_str();
-        delay(50);
+        TASK_DELAY;
     }
     vTaskDelete(NULL);
 }
@@ -396,7 +396,7 @@ void Pressure2_GetData_Callback(void *param)
         str.clear();
         str.str("");
         str << Pressure_GetData(PRESSURE2).c_str();
-        delay(50);
+        TASK_DELAY;
     }
     vTaskDelete(NULL);
 }
@@ -418,7 +418,7 @@ void Pressure3_GetData_Callback(void *param)
         str.clear();
         str.str("");
         str << Pressure_GetData(PRESSURE3).c_str();
-        delay(50);
+        TASK_DELAY;
     }
     vTaskDelete(NULL);
 }
@@ -817,7 +817,7 @@ void Gyroscope_GetData_Callback(void *param)
         str.clear();
         str.str("");
         str << Gyroscope_GetData().c_str();
-        delay(50);
+        TASK_DELAY;
     }
     vTaskDelete(NULL);
 }
@@ -840,7 +840,7 @@ void data_json_Callback(void *param)
         str.clear();
         str.str("");
         str << data_json().c_str();
-        delay(50);
+        TASK_DELAY;
     }
     vTaskDelete(NULL);
 }
@@ -865,7 +865,7 @@ void stop_task_Callback(void *param)
         // if found
         if (f != Functions_tree.end() && f->second.running)
         {
-            // can't use the default delete function,cause the mutex cannot be realeased
+            // can't use the default delete function, cause the mutex cannot be realeased
             // vTaskDelete(handle);
             f->second.running = false;
             str << "Delete Success";
@@ -922,7 +922,7 @@ void menu()
     }
 }
 
-void Task_Init()
+void debug_init()
 {
     register_functions_tree();
     menu();

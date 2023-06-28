@@ -19,8 +19,6 @@
 #include <numeric>
 #include <iomanip>
 
-#define Debug_Mode 1
-
 using namespace std;
 
 #endif // !__HEADER_H

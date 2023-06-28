@@ -11,6 +11,7 @@
 #define SDA_PIN 12
 #define SCL_PIN 1
 #define I2C_BAUDRATE 1000000UL
+#define INT_PIN 18
 
 // Hardware Initialization
 void Serial_Init();
@@ -22,13 +23,16 @@ bool Hardware_Init();
 
 // Serial_Callback
 void Serial_Callback(void);
-// Output Interface
 
+// Output Interface
 void Message_Println(const String &msg);
 void Message_Printf(const String &msg);
 
-#if Debug_Mode
-// Function
+// Outside Interrupt
+void Interrupt_Init();
+
+#ifdef INSOLE_DEBUG_MODE
+// Debug Function
 String Pressure_GetData(const Pressure_Id &pressure_id);
 String Pressure_Calibrate(const Pressure_Id &pressure_id);
 String Gyroscope_GetGyroRateDivisor();
@@ -46,5 +50,6 @@ String Gyroscope_EnableGyrolDLPF(const bool &enable, const icm20x_gyro_cutoff_t 
 String Gyroscope_GetData();
 String clear_nvs_namespace();
 #endif
+
 String data_json();
 #endif // !__HARDWARD_H
