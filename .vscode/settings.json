@@ -53,6 +53,7 @@
         "thread": "cpp",
         "cinttypes": "cpp",
         "typeinfo": "cpp",
-        "esp32-hal-i2c.h": "c"
+        "esp32-hal-i2c.h": "c",
+        "list": "cpp"
     }
 }

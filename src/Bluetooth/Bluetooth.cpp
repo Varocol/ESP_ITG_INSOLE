@@ -1,71 +1,142 @@
 #include "Bluetooth.h"
 
-// bluetooth message
-String *ble_msg;
+static NimBLEServer *pServer;
 
-BLEServer *pServer = NULL;                   // BLEServer
-BLEService *pService = NULL;                 // BLEService
-BLECharacteristic *pTxCharacteristic = NULL; // BLETxCharacteristic
-BLECharacteristic *pRxCharacteristic = NULL; // BLERxCharacteristic
+NimBLECharacteristic *Status_sensor_Characteristic;
+NimBLECharacteristic *Gyro_sensor_Characteristic;
+NimBLECharacteristic *Accel_sensor_Characteristic;
+NimBLECharacteristic *Magn_sensor_Characteristic;
+NimBLECharacteristic *Temp_sensor_Characteristic;
+NimBLECharacteristic *PRESS1_sensor_Characteristic;
+NimBLECharacteristic *PRESS2_sensor_Characteristic;
+NimBLECharacteristic *PRESS3_sensor_Characteristic;
 
-volatile bool deviceConnected = false; // current connection status
-
-/**
- * @brief  Bluetooth Initialization
- * @param  None
- * @retval None
- */
-void bluetooth_init()
+/**  None of these are required as they will be handled by the library with defaults. **
+ **                       Remove as you see fit for your needs                        */
+class ServerCallbacks : public NimBLEServerCallbacks
 {
-    // Create a BLE device
-    BLEDevice::init(DEVICE_NAME);
-    // Create a BLE server
-    pServer = BLEDevice::createServer();
-    pServer->setCallbacks(new MyServerCallbacks());
-    pService = pServer->createService(SERVICE_UUID);
-
-    // Create a BLE characteristic
-    pTxCharacteristic = pService->createCharacteristic(CHARACTERISTIC_UUID_TX, BLECharacteristic::PROPERTY_NOTIFY);
-    pTxCharacteristic->addDescriptor(new BLE2902());
-    pRxCharacteristic = pService->createCharacteristic(CHARACTERISTIC_UUID_RX, BLECharacteristic::PROPERTY_WRITE);
-    pRxCharacteristic->setCallbacks(new MyCallbacks());
-    // Start the service and the server
-    pService->start();
-    pServer->getAdvertising()->start();
-}
-
-/**
- * @brief  Bluetooth sendmessage
- * @param  msg              message
- * @retval None
- */
-void bluetooth_sendmessage(String msg)
-{
-    // deviceConnected 已连接
-    if (deviceConnected)
+    void onConnect(NimBLEServer *pServer)
     {
-        pTxCharacteristic->setValue((uint8_t *)msg.c_str(), msg.length());
-        pTxCharacteristic->notify();
-    }
-}
+        log_i("Client connected, Multi-connect support: start advertising");
+        NimBLEDevice::startAdvertising();
+    };
+    void onConnect(NimBLEServer *pServer, ble_gap_conn_desc *desc)
+    {
+        log_i("NimBLE Client address: %s", NimBLEAddress(desc->peer_ota_addr).toString().c_str());
+        pServer->updateConnParams(desc->conn_handle, 24, 48, 0, 60);
+        bluetooth_is_connect = true;
+        // 蓝色呼吸
+        WS2812_Blink_typedef led_mode;
+        led_mode.WS2812_Blink_Mode = Breathe;
+        led_mode.r = 0;
+        led_mode.g = 150;
+        led_mode.b = 255;
+        xQueueSend(WS2812_control, &led_mode, portMAX_DELAY);
+    };
+    void onDisconnect(NimBLEServer *pServer)
+    {
+        log_i("Client disconnected - start advertising");
+        NimBLEDevice::startAdvertising();
+        bluetooth_is_connect = false;
+        // 蓝色呼吸
+        WS2812_Blink_typedef led_mode;
+        led_mode.WS2812_Blink_Mode = Breathe;
+        led_mode.r = 150;
+        led_mode.g = 0;
+        led_mode.b = 255;
+        xQueueSend(WS2812_control, &led_mode, portMAX_DELAY);
+    };
+};
 
-void MyServerCallbacks::onConnect(BLEServer *pServer)
-{
-    deviceConnected = true;
-    Message_Println("[BLE]:Connected.");
-}
+static NimBLECharacteristicCallbacks READ_sensor_chrCallbacks;
 
-void MyServerCallbacks::onDisconnect(BLEServer *pServer)
+void int_NimBLE()
 {
-    deviceConnected = false;
-    delay(500);
-    Serial.println("[BLE]:Disconnected.");
-    Serial.println("[BLE]:Start Advertising.");
-    pServer->getAdvertising()->start();
-}
+    NimBLEDevice::init(DEVICE_NAME);
+    NimBLEDevice::setPower(ESP_PWR_LVL_P9); /** +9db */
+    NimBLEDevice::setSecurityAuth(BLE_SM_PAIR_AUTHREQ_SC);
+    pServer = NimBLEDevice::createServer();
+    pServer->setCallbacks(new ServerCallbacks());
 
-void MyCallbacks::onWrite(BLECharacteristic *pCharacteristic)
-{
-    ble_msg = new String(pCharacteristic->getValue().c_str());
-    xTaskCreate(function_map_task, "function_map", TASK_STACK_SIZE, (void *)ble_msg, 1, NULL);
+    NimBLEService *Device_Information_Service = pServer->createService(Device_Information_Service_UUID);
+    NimBLECharacteristic *Serial_Number_Characteristic = Device_Information_Service->createCharacteristic(
+        Serial_Number_CHARACTERISTIC_UUID,
+        NIMBLE_PROPERTY::READ);
+    char macStr[18] = {0};
+    uint8_t mac[6];
+    esp_read_mac(mac, ESP_MAC_BT);
+    sprintf(macStr, "%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    Serial_Number_Characteristic->setValue(macStr);
+
+    NimBLECharacteristic *Firmware_Revision_Characteristic = Device_Information_Service->createCharacteristic(
+        Firmware_Revision_CHARACTERISTIC_UUID,
+        NIMBLE_PROPERTY::READ);
+    Firmware_Revision_Characteristic->setValue(Firmware_Revision);
+
+    NimBLECharacteristic *Manufacturer_Name_Characteristic = Device_Information_Service->createCharacteristic(
+        Manufacturer_Name_CHARACTERISTIC_UUID,
+        NIMBLE_PROPERTY::READ);
+    Manufacturer_Name_Characteristic->setValue(Manufacturer_Name);
+
+    Device_Information_Service->start();
+
+    NimBLEService *Battery_service_Service = pServer->createService(Battery_service_UUID);
+
+    NimBLECharacteristic *Battery_Level_Characteristic = Battery_service_Service->createCharacteristic(
+        Battery_Level_CHARACTERISTIC_UUID,
+        NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY);
+    Battery_Level_Characteristic->setValue(Manufacturer_Name);
+
+    Battery_service_Service->start();
+
+    NimBLEService *READ_sensor_Service = pServer->createService(SERVICE_UUID);
+
+    Status_sensor_Characteristic = READ_sensor_Service->createCharacteristic(
+        Status_sensor_CHARACTERISTIC_UUID,
+        NIMBLE_PROPERTY::READ);
+    Status_sensor_Characteristic->setCallbacks(&READ_sensor_chrCallbacks);
+
+    Gyro_sensor_Characteristic = READ_sensor_Service->createCharacteristic(
+        Gyro_sensor_CHARACTERISTIC_UUID,
+        NIMBLE_PROPERTY::READ);
+    Gyro_sensor_Characteristic->setCallbacks(&READ_sensor_chrCallbacks);
+
+    Accel_sensor_Characteristic = READ_sensor_Service->createCharacteristic(
+        Accel_sensor_CHARACTERISTIC_UUID,
+        NIMBLE_PROPERTY::READ);
+    Accel_sensor_Characteristic->setCallbacks(&READ_sensor_chrCallbacks);
+
+    Magn_sensor_Characteristic = READ_sensor_Service->createCharacteristic(
+        Magn_sensor_CHARACTERISTIC_UUID,
+        NIMBLE_PROPERTY::READ);
+    Magn_sensor_Characteristic->setCallbacks(&READ_sensor_chrCallbacks);
+
+    Temp_sensor_Characteristic = READ_sensor_Service->createCharacteristic(
+        Temp_sensor_CHARACTERISTIC_UUID,
+        NIMBLE_PROPERTY::READ);
+    Temp_sensor_Characteristic->setCallbacks(&READ_sensor_chrCallbacks);
+
+    PRESS1_sensor_Characteristic = READ_sensor_Service->createCharacteristic(
+        PRESS1_sensor_CHARACTERISTIC_UUID,
+        NIMBLE_PROPERTY::READ);
+    PRESS1_sensor_Characteristic->setCallbacks(&READ_sensor_chrCallbacks);
+
+    PRESS2_sensor_Characteristic = READ_sensor_Service->createCharacteristic(
+        PRESS2_sensor_CHARACTERISTIC_UUID,
+        NIMBLE_PROPERTY::READ);
+    PRESS2_sensor_Characteristic->setCallbacks(&READ_sensor_chrCallbacks);
+
+    PRESS3_sensor_Characteristic = READ_sensor_Service->createCharacteristic(
+        PRESS3_sensor_CHARACTERISTIC_UUID,
+        NIMBLE_PROPERTY::READ);
+    PRESS3_sensor_Characteristic->setCallbacks(&READ_sensor_chrCallbacks);
+
+    READ_sensor_Service->start();
+
+    NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
+    pAdvertising->addServiceUUID(READ_sensor_Service->getUUID());
+    pAdvertising->addServiceUUID(Battery_service_Service->getUUID());
+    pAdvertising->addServiceUUID(Device_Information_Service->getUUID());
+    pAdvertising->setScanResponse(true);
+    pAdvertising->start();
 }

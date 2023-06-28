@@ -6,45 +6,34 @@
 #include "Gyroscope.h"
 #include "Pressure.h"
 #include "Bluetooth.h"
+#include "WS2812.h"
+
 
 #define SERIAL_BAUDRATE 115200
-#define SDA_PIN 12
-#define SCL_PIN 1
+#define SDA_PIN 7
+#define SCL_PIN 8
 #define I2C_BAUDRATE 1000000UL
+#define WS2812_PIN 6
+
+#define DEVICE_NAME       "易滑邦-智能鞋垫"
+#define Firmware_Revision "2.0.1"
+#define Manufacturer_Name "BHU AI-EN"
+
+
 
 // Hardware Initialization
-void Serial_Init();
-void Bluetooth_Init();
-bool Wire_Init();
+void Wire_Init();
 bool Pressure_Init();
 bool Gyroscope_Init();
-bool Hardware_Init();
-
+void Hardware_Init();
+bool Check_Sensor();
+void check_Pressure_Calibrate();
 // Serial_Callback
-void Serial_Callback(void);
 // Output Interface
 
 void Message_Println(const String &msg);
 void Message_Printf(const String &msg);
 
-#if Debug_Mode
-// Function
-String Pressure_GetData(const Pressure_Id &pressure_id);
-String Pressure_Calibrate(const Pressure_Id &pressure_id);
-String Gyroscope_GetGyroRateDivisor();
-String Gyroscope_SetGyroRateDivisor(const uint8_t &new_gyro_divisor);
-String Gyroscope_GetAccelRateDivisor();
-String Gyroscope_SetAccelRateDivisor(const uint16_t &new_accel_divisor);
-String Gyroscope_GetAccelRange();
-String Gyroscope_SetAccelRange(const icm20948_accel_range_t &new_accel_range);
-String Gyroscope_GetGyroRange();
-String Gyroscope_SetGyroRange(const icm20948_gyro_range_t &new_gyro_range);
-String Gyroscope_GetMagDataRate();
-String Gyroscope_SetMagDataRate(const ak09916_data_rate_t &rate);
-String Gyroscope_EnableAccelDLPF(const bool &enable, const icm20x_accel_cutoff_t &cutoff_freq);
-String Gyroscope_EnableGyrolDLPF(const bool &enable, const icm20x_gyro_cutoff_t &cutoff_freq);
-String Gyroscope_GetData();
-String clear_nvs_namespace();
-#endif
+extern bool certification;
 String data_json();
 #endif // !__HARDWARD_H

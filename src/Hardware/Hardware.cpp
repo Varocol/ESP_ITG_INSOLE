@@ -2,217 +2,7 @@
 
 // serial message
 String *serial_msg;
-
-/**
- * @brief  Serial Devices Initialization
- * @param  None
- * @retval None
- */
-void Serial_Callback(void)
-{
-    while (Serial.available())
-    {
-        serial_msg = new String(Serial.readString());
-        if (serial_msg->charAt(serial_msg->length() - 1) == '\r' || serial_msg->charAt(serial_msg->length() - 1) == '\n')
-        {
-            serial_msg->remove(serial_msg->length() - 1);
-        }
-        xTaskCreate(function_map_task, "function_map", TASK_STACK_SIZE, (void *)serial_msg, 1, NULL);
-    }
-}
-
-/**
- * @brief  Serial Devices Initialization
- * @param  None
- * @retval None
- */
-void Serial_Init()
-{
-    Serial.begin(SERIAL_BAUDRATE);
-    Serial.onReceive(Serial_Callback);
-}
-
-/**
- * @brief  Bluetooth Initialization
- * @param  None
- * @retval None
- */
-void Bluetooth_Init()
-{
-    bluetooth_init();
-    Message_Println("[BLE]:Bluetooth Started Successfully.");
-}
-
-/**
- * @brief  Serial Devices Initialization
- * @param  None
- * @retval true on success,false on failed
- */
-bool Wire_Init()
-{
-    if (Wire.setPins(SDA_PIN, SCL_PIN))
-    {
-        Message_Println("[Wire]:Pin Set Successfully.");
-    }
-    else
-    {
-        Message_Println("[Wire]:Pin Set Failed.");
-        return false;
-    }
-    if (Wire.begin(-1, -1, I2C_BAUDRATE))
-    {
-        Message_Println("[Wire]:I2C Started Successfully.");
-    }
-    else
-    {
-        Message_Println("[Wire]:I2C Started Failed.");
-        return false;
-    }
-#ifdef WIRE_USE_MUTEX
-    if (Wire_Mutex_Init())
-    {
-        Message_Println("[Wire]:Mutex Initialized.");
-    }
-    else
-    {
-        Message_Println("[Wire]:Mutex Failed.");
-        return false;
-    }
-#endif
-    return true;
-}
-/**
- * @brief  Pressure Sensors Initialization
- * @param  None
- * @retval true on success,false on failed
- */
-bool Pressure_Init()
-{
-    PRESSURE_STATUS_CODE status;
-    status = pressure1.init();
-    Message_Println(pressure1.message(status));
-    if (status < 0)
-    {
-        return false;
-    }
-    status = pressure2.init();
-    Message_Println(pressure2.message(status));
-    if (status < 0)
-    {
-        return false;
-    }
-    status = pressure3.init();
-    Message_Println(pressure3.message(status));
-    if (status < 0)
-    {
-        return false;
-    }
-    return true;
-}
-
-/**
- * @brief  Gyroscope Initialization
- * @param  None
- * @retval true on success,false on failed
- */
-bool Gyroscope_Init()
-{
-    GYROSCOPE_STATUS_CODE status = gyroscope_init();
-    Message_Println(gyroscope_message(status));
-    if (status < 0)
-    {
-        return false;
-    }
-    return true;
-}
-
-/**
- * @brief  Hardware Initialization
- * @param  None
- * @retval true on success,false on failed
- */
-bool Hardware_Init()
-{
-    Serial_Init();
-    Bluetooth_Init();
-    if (!Wire_Init())
-    {
-        return false;
-    }
-    if (!Pressure_Init())
-    {
-        return false;
-    }
-    if (!Gyroscope_Init())
-    {
-        return false;
-    }
-    return true;
-}
-
-/**
- * @brief  Output Interface
- * @param  msg          message
- * @retval None
- */
-void Message_Println(const String &msg)
-{
-    Message_Printf(msg + "\r\n");
-}
-
-/**
- * @brief  Output Interface
- * @param  msg          message
- * @retval None
- */
-void Message_Printf(const String &msg)
-{
-    // Serial side
-    Serial.printf(msg.c_str());
-    // Blutooth side
-    bluetooth_sendmessage(msg);
-}
-
-#if Debug_Mode
-/**
- * @brief  Pressure Get Data
- * @param  pressure_id      Pressure Id
- * @retval data or message
- */
-String Pressure_GetData(const Pressure_Id &pressure_id)
-{
-    PRESSURE_STATUS_CODE status;
-    Pressure *pressure;
-    Pressure_Packet packet;
-    int timeout = TIMEOUT;
-    switch (pressure_id)
-    {
-    case PRESSURE1:
-        pressure = &pressure1;
-        break;
-    case PRESSURE2:
-        pressure = &pressure2;
-        break;
-    case PRESSURE3:
-        pressure = &pressure3;
-        break;
-    }
-    while (pressure->allStageconversionCheck() == false && timeout--)
-        ;
-    if (timeout == -1)
-    {
-        return pressure->message(STAGE_CONVERT_TIMEOUT);
-    }
-    status = pressure->getData(packet);
-    if (status < 0)
-    {
-        return pressure->message(status);
-    }
-    else
-    {
-        return pressure->message(packet);
-    }
-}
+bool certification = false;
 
 /**
  * @brief  Pressure Calibrate
@@ -244,212 +34,198 @@ String Pressure_Calibrate(const Pressure_Id &pressure_id)
     return pressure->message(status);
 }
 
-/**
- * @brief  Gyroscope GetGyroRateDivisor
- * @param  None
- * @retval data or message
- */
-String Gyroscope_GetGyroRateDivisor()
+void check_Pressure_Calibrate()
 {
-    uint8_t divisor = gyroscope_getGyroRateDivisor();
-    stringstream str;
-    str << "Gyro Rate Divisor|" << (int)divisor + 1 << " Gyro Data Rate|" << 1100 / (1.0 + divisor) << " Hz";
-    return gyroscope_message(str.str().c_str());
-}
-
-/**
- * @brief  Gyroscope SetGyroRateDivisor
- * @param  new_gyro_divisor         Gyro Rate Divisor value
- * @retval data or message
- */
-String Gyroscope_SetGyroRateDivisor(const uint8_t &new_gyro_divisor)
-{
-    return gyroscope_message(gyroscope_setGyroRateDivisor(new_gyro_divisor));
-}
-
-/**
- * @brief  Gyroscope GetAccelRateDivisor
- * @param  None
- * @retval data or message
- */
-String Gyroscope_GetAccelRateDivisor()
-{
-    uint8_t divisor = gyroscope_getAccelRateDivisor();
-    stringstream str;
-    str << "Accel Rate Divisor|" << (int)divisor + 1 << " Accel Data Rate|" << 1125 / (1.0 + divisor) << " Hz";
-    return gyroscope_message(str.str().c_str());
-}
-
-/**
- * @brief  Gyroscope SetAccelRateDivisor
- * @param  new_accel_divisor        Accel Rate Divisor value
- * @retval data or message
- */
-String Gyroscope_SetAccelRateDivisor(const uint16_t &new_accel_divisor)
-{
-    return gyroscope_message(gyroscope_setAccelRateDivisor(new_accel_divisor));
-}
-
-/**
- * @brief  Gyroscope GetAccelRange
- * @param  None
- * @retval data or message
- */
-String Gyroscope_GetAccelRange()
-{
-    stringstream str;
-    str << "Accel Range|";
-    switch (gyroscope_getAccelRange())
+    Preferences prefs;
+    String Pressure_Calibrate_temp_str = "";
+    if (prefs.begin(CALIBRATE_VALUE_SPACENAME) == true)
     {
-    case ICM20948_ACCEL_RANGE_2_G:
-        str << "+-2G";
-        break;
-    case ICM20948_ACCEL_RANGE_4_G:
-        str << "+-4G";
-        break;
-    case ICM20948_ACCEL_RANGE_8_G:
-        str << "+-8G";
-        break;
-    case ICM20948_ACCEL_RANGE_16_G:
-        str << "+-16G";
-        break;
+        if (!prefs.isKey(PRESSURE1_CALIBRATE_VALUE_KEY))
+        {
+            Pressure_Calibrate_temp_str = Pressure_Calibrate(PRESSURE1);
+            log_i("%s", Pressure_Calibrate_temp_str.c_str());
+        }
+        if (!prefs.isKey(PRESSURE2_CALIBRATE_VALUE_KEY))
+        {
+            Pressure_Calibrate_temp_str = Pressure_Calibrate(PRESSURE2);
+            log_i("%s", Pressure_Calibrate_temp_str.c_str());
+        }
+        if (!prefs.isKey(PRESSURE3_CALIBRATE_VALUE_KEY))
+        {
+            Pressure_Calibrate_temp_str = Pressure_Calibrate(PRESSURE3);
+            log_i("%s", Pressure_Calibrate_temp_str.c_str());
+        }
     }
-    return gyroscope_message(str.str().c_str());
+    else
+    {
+        Pressure_Calibrate_temp_str = Pressure_Calibrate(PRESSURE1);
+        log_i("%s", Pressure_Calibrate_temp_str.c_str());
+        Pressure_Calibrate_temp_str = Pressure_Calibrate(PRESSURE2);
+        log_i("%s", Pressure_Calibrate_temp_str.c_str());
+        Pressure_Calibrate_temp_str = Pressure_Calibrate(PRESSURE3);
+        log_i("%s", Pressure_Calibrate_temp_str.c_str());
+    }
 }
 
 /**
- * @brief  Gyroscope SetAccelRange
- * @param  new_accel_range      Accel Range value
- * @retval data or message
- */
-String Gyroscope_SetAccelRange(const icm20948_accel_range_t &new_accel_range)
-{
-    return gyroscope_message(gyroscope_setAccelRange(new_accel_range));
-}
-
-/**
- * @brief  Gyroscope GetAccelRange
+ * @brief  Serial Devices Initialization
  * @param  None
- * @retval data or message
+ * @retval true on success,false on failed
  */
-String Gyroscope_GetGyroRange()
+void Wire_Init()
 {
-    stringstream str;
-    str << "Gyro Range|";
-    switch (gyroscope_getGyroRange())
+    if (Wire.setPins(SDA_PIN, SCL_PIN))
     {
-    case ICM20948_GYRO_RANGE_250_DPS:
-        str << "250 degrees/s";
-        break;
-    case ICM20948_GYRO_RANGE_500_DPS:
-        str << "500 degrees/s";
-        break;
-    case ICM20948_GYRO_RANGE_1000_DPS:
-        str << "1000 degrees/s";
-        break;
-    case ICM20948_GYRO_RANGE_2000_DPS:
-        str << "2000 degrees/s";
-        break;
+        log_i("[Wire]:Pin Set Successfully.");
     }
-    return gyroscope_message(str.str().c_str());
-}
-
-/**
- * @brief  Gyroscope SetGyroRange
- * @param  new_gyro_range           Gyro Range
- * @retval data or message
- */
-String Gyroscope_SetGyroRange(const icm20948_gyro_range_t &new_gyro_range)
-{
-    return gyroscope_message(gyroscope_setGyroRange(new_gyro_range));
-}
-
-/**
- * @brief  Gyroscope GetMagDataRate
- * @param  None
- * @retval data or message
- */
-String Gyroscope_GetMagDataRate()
-{
-    stringstream str;
-    str << "Mag Data Rate|";
-    switch (gyroscope_getMagDataRate())
+    else
     {
-    case AK09916_MAG_DATARATE_SHUTDOWN:
-        str << "Shutdown";
-        break;
-    case AK09916_MAG_DATARATE_SINGLE:
-        str << "Single/One shot";
-        break;
-    case AK09916_MAG_DATARATE_10_HZ:
-        str << "10 Hz";
-        break;
-    case AK09916_MAG_DATARATE_20_HZ:
-        str << "20 Hz";
-        break;
-    case AK09916_MAG_DATARATE_50_HZ:
-        str << "50 Hz";
-        break;
-    case AK09916_MAG_DATARATE_100_HZ:
-        str << "100 Hz";
-        break;
+        log_e("[Wire]:Pin Set Failed.");
+        WS2812_Blink_typedef led_mode;
+        led_mode.WS2812_Blink_Mode = Double_flashing;
+        led_mode.r = 255;
+        led_mode.g = 0;
+        led_mode.b = 0;
+        xQueueSend(WS2812_control, &led_mode, portMAX_DELAY);
+        ESP_ERROR_CHECK(ESP_FAIL);
     }
-    return gyroscope_message(str.str().c_str());
-}
-
-/**
- * @brief  Gyroscope SetMagDataRate
- * @param  rate             Mag Data Rate
- * @retval data or message
- */
-String Gyroscope_SetMagDataRate(const ak09916_data_rate_t &rate)
-{
-    return gyroscope_message(gyroscope_setMagDataRate(rate));
-}
-
-/**
- * @brief  Gyroscope EnableAccelDLPF
- * @param  enable           enable or disable
- * @param  cutoff_freq      cutoff frequency
- * @retval data or message
- */
-String Gyroscope_EnableAccelDLPF(const bool &enable, const icm20x_accel_cutoff_t &cutoff_freq)
-{
-    return gyroscope_message(gyroscope_enableAccelDLPF(enable, cutoff_freq));
-}
-
-/**
- * @brief  Gyroscope EnableGyrolDLPF
- * @param  enable           enable or disable
- * @param  cutoff_freq      cutoff frequency
- * @retval data or message
- */
-String Gyroscope_EnableGyrolDLPF(const bool &enable, const icm20x_gyro_cutoff_t &cutoff_freq)
-{
-    return gyroscope_message(gyroscope_enableGyrolDLPF(enable, cutoff_freq));
-}
-
-/**
- * @brief  Pressure-clear nvs namespace
- * @param  None
- * @retval message
- */
-String clear_nvs_namespace()
-{
-    esp_err_t status = nvs_flash_erase();
-    if (status == ESP_ERR_NOT_FOUND)
+    if (Wire.begin(-1, -1, I2C_BAUDRATE))
     {
-        return "no nvs partition";
+        log_i("[Wire]:I2C Started Successfully.");
     }
-    status = nvs_flash_init();
-    if (status != ESP_OK)
+    else
     {
-        return "nvs flash init failed";
+        log_e("[Wire]:I2C Started Failed.");
+        WS2812_Blink_typedef led_mode;
+        led_mode.WS2812_Blink_Mode = Double_flashing;
+        led_mode.r = 255;
+        led_mode.g = 0;
+        led_mode.b = 0;
+        xQueueSend(WS2812_control, &led_mode, portMAX_DELAY);
+        ESP_ERROR_CHECK(ESP_FAIL);
     }
-    return "clear namespace success";
-}
-
+#ifdef WIRE_USE_MUTEX
+    if (Wire_Mutex_Init())
+    {
+        log_i("[Wire]:Mutex Initialized.");
+    }
+    else
+    {
+        log_e("[Wire]:Mutex Failed.");
+        WS2812_Blink_typedef led_mode;
+        led_mode.WS2812_Blink_Mode = Double_flashing;
+        led_mode.r = 255;
+        led_mode.g = 0;
+        led_mode.b = 0;
+        xQueueSend(WS2812_control, &led_mode, portMAX_DELAY);
+        ESP_ERROR_CHECK(ESP_FAIL);
+    }
 #endif
+}
+/**
+ * @brief  Pressure Sensors Initialization
+ * @param  None
+ * @retval true on success,false on failed
+ */
+bool Pressure_Init()
+{
+    PRESSURE_STATUS_CODE press_status;
+    GYROSCOPE_STATUS_CODE gyro_status;
+    String status_string;
+    press_status = pressure1.init();
+    log_d("%s", pressure1.message(press_status).c_str());
+    if (press_status < 0)
+    {
+        set_ble_status("Press1_Error_" + press_status);
+        return false;
+    }
+    press_status = pressure2.init();
+    log_d("%s", pressure2.message(press_status).c_str());
+    if (press_status < 0)
+    {
+        set_ble_status("Press2_Error_" + press_status);
+        return false;
+    }
+    press_status = pressure3.init();
+    log_d("%s", pressure3.message(press_status).c_str());
+    if (press_status < 0)
+    {
+        set_ble_status("Press3_Error_" + press_status);
+        return false;
+    }
+    gyro_status = gyroscope_init();
+    log_d("%s", gyroscope_message(gyro_status).c_str());
+    if (gyro_status < 0)
+    {
+        set_ble_status("Gyro_Error_" + gyro_status);
+        return false;
+    }
+    return true;
+}
+
+/**
+ * @brief  Gyroscope Initialization
+ * @param  None
+ * @retval true on success,false on failed
+ */
+bool Gyroscope_Init()
+{
+    GYROSCOPE_STATUS_CODE status = gyroscope_init();
+    log_d("%s", gyroscope_message(status).c_str());
+    if (status < 0)
+    {
+        set_ble_status("Gyro_Error_");
+        return false;
+    }
+    return true;
+}
+
+/**
+ * @brief  Hardware Initialization
+ * @param  None
+ * @retval true on success,false on failed
+ */
+void Hardware_Init()
+{
+    init_LED();
+    Wire_Init();
+    pinMode(1, INPUT_PULLUP);
+    // if (!Wire_Init())
+    // {
+    //     return false;
+    // }
+    // if (!Pressure_Init())
+    // {
+    //     return false;
+    // }
+    // if (!Gyroscope_Init())
+    // {
+    //     return false;
+    // }
+}
+
+/**
+ * @brief  Output Interface
+ * @param  msg          message
+ * @retval None
+ */
+void Message_Println(const String &msg)
+{
+    Message_Printf(msg + "\r\n");
+}
+
+/**
+ * @brief  Output Interface
+ * @param  msg          message
+ * @retval None
+ */
+void Message_Printf(const String &msg)
+{
+    // Serial side
+    Serial.printf(msg.c_str());
+    // Blutooth side
+    // bluetooth_sendmessage(msg);
+}
 
 /**
  * @brief  Gyroscope GetData
@@ -554,4 +330,38 @@ String data_json()
     serializeJson(doc, json);
     // serializeJsonPretty(doc, json);
     return json;
+}
+
+bool Check_Sensor()
+{
+    uint8_t error;
+    Wire.beginTransmission(GYROSCOPE_ADDR);
+    error = Wire.endTransmission();
+    if (error != 0)
+    {
+        log_e("I2C GYROSCOPE error : %d", error);
+        return false;
+    }
+    Wire.beginTransmission(PRESSURE1_ADDR);
+    error = Wire.endTransmission();
+    if (error != 0)
+    {
+        log_e("I2C PRESSURE1 error : %d", error);
+        return false;
+    }
+    Wire.beginTransmission(PRESSURE2_ADDR);
+    error = Wire.endTransmission();
+    if (error != 0)
+    {
+        log_e("I2C PRESSURE2 error : %d", error);
+        return false;
+    }
+    Wire.beginTransmission(PRESSURE3_ADDR);
+    error = Wire.endTransmission();
+    if (error != 0)
+    {
+        log_e("I2C PRESSURE3 error : %d", error);
+        return false;
+    }
+    return true;
 }
